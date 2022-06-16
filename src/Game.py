@@ -1,7 +1,7 @@
 from typing import List, Tuple, Dict
 
 
-TTT_NUM_ACTIONS: int = 9  # Game-specific
+NUM_ACTIONS: int = 9  # Game-specific
 Image = str
 
 
@@ -32,9 +32,7 @@ class Game:
     """Describes the logic of the game and provides appropriate interface"""
 
     def __init__(self):
-        self._num_actions: int = (
-            TTT_NUM_ACTIONS  # Number of actions possible in the game
-        )
+        self._num_actions: int = NUM_ACTIONS  # Number of actions possible in the game
         self._data: List[
             Tuple[Image, Dict[int, float]]
         ] = []  # Stores data about analyzed positions:
@@ -42,7 +40,7 @@ class Game:
         # and a map from action number to a probability of this action
         self._position: Position = START_POSITION  # Current in-game position
         self._positions: List[Position] = []  # List of all the positions reached
-        self._scores: Dict[Image, float]
+        self._scores: Dict[Image, float]  # Evaluation scores of the positions
 
     def get_actions(self) -> List[int]:
         """Returns the list of actions that are possible from the current position"""
