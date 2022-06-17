@@ -124,30 +124,3 @@ class Game:
     def get_scores(self) -> List[float]:
         """Returns the final evaluation scores for the positions in the game"""
         return self._scores
-
-def position_test():
-    pos = Position([1, -1, -1, 1, 0, 0, 1, 0, 0])
-    assert(pos.get_winner() == 1)
-    assert(pos.get_current_move() == -1)
-    assert(pos.to_image() == '200211211')
-    assert(position_from_image(pos.to_image()).board == pos.board)
-    pos = Position([-1, -1, -1, 1, 0, 0, 1, 1, 0])
-    assert(pos.get_winner() == -1)
-    assert(pos.get_current_move() == 1)
-
-def game_test():
-    g = Game()
-    g.commit_action(0)
-    g.commit_action(1)
-    g.commit_action(3)
-    g.commit_action(2)
-    g.commit_action(6)
-    g.assign_scores()
-    assert(g.get_current_move() == -1)
-    assert(g.get_actions() == [4, 5, 7, 8])
-    assert(g.is_terminal() == True)
-    assert(g.get_scores() == [1, 1, 1, 1, 1])
-
-def test():
-    position_test()
-    game_test()
