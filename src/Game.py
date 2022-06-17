@@ -14,7 +14,7 @@ class Position:
 
     def to_image(self) -> Image:
         """Returns the representation of the position that preserves all the information about the board"""
-        res = ''
+        res = ""
         for i in self.board:
             res += str(i + 1)
         return res
@@ -53,7 +53,7 @@ class Position:
             elif i == -1:
                 result += [0, 0, 1]
         return result
-    
+
     def copy(self):
         return Position(self.board.copy())
 
@@ -89,7 +89,8 @@ class Game:
 
     def get_winner(self) -> int:
         """Returns 1 if player who moved first won, 0 if the game is a tie, -1 if the player who moved second won"""
-        if self._position.board.count(0) == 0: return 0
+        if self._position.board.count(0) == 0:
+            return 0
         return self._position.get_winner()
 
     def get_current_move(self) -> int:
@@ -106,7 +107,6 @@ class Game:
         for pos in self._position:
             new_game._positions.append(pos.copy())
         return new_game
-        
 
     def commit_action(self, action: int):
         """Makes a move according to the id of the action"""
