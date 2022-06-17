@@ -68,3 +68,6 @@ class Game:
 
     def assign_scores(self):
         """Assigns the evaluation scores to the positions based on the winner of the game"""
+
+    def get_scores(self) -> List[float]:
+        """Returns the final evaluation scores for the positions in the game"""
