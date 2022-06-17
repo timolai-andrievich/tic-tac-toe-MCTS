@@ -5,12 +5,12 @@ from typing import Tuple, Dict
 class Node:
     """Represents a node in the Monte-Carlo search tree"""
 
-    def __init__(self, parent: Node, prior: float):
+    def __init__(self, parent, prior: float):
         self._prior: float = prior
         self._children: Dict[int, Node] = {}
         self._visits: int = 0
 
-    def select(self) -> Tuple[int, Node]:
+    def select(self):
         """Selects the node with the best UCB score, and returns action leading to that node and the Node itself"""
 
     def expand(self, game: Game) -> None:
