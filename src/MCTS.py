@@ -39,3 +39,6 @@ class MCST:
 
     def simulate(self, game: Game, policy_function) -> int:
         """Simulates the game and returns the winner"""
+
+    def commit_action(self, action: int):
+        """Makes the subtree of the root corresponding to the action the new root, and discards all the other nodes"""
