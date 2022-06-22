@@ -47,7 +47,7 @@ class NNModel(nn.Module):
 class NN:
     """A wrapper for the network"""
 
-    def __init__(self, use_gpu=True, file=None):
+    def __init__(self, use_gpu=False, file=None):
         self._device = "cuda" if use_gpu else "cpu"
         if file:
             self._NN = NNModel().to(self._device)
