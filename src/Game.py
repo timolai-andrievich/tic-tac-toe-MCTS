@@ -1,8 +1,12 @@
 from hashlib import new
 from typing import List, Tuple, Dict
+import numpy as np
 
 
 NUM_ACTIONS: int = 9  # Game-specific
+BOARD_WIDTH = 3
+BOARD_HEIGHT = 3
+NUM_LAYERS = 3
 Image = str
 
 
@@ -42,16 +46,16 @@ class Position:
                 res = self.board[a]
                 return res
 
-    def vectorize(self) -> List[float]:
-        """Returns normalized vector that represents the position for NN training"""
-        result = []
-        for i in self.board:
-            if i == 1:
-                result += [1, 0, 0]
-            elif i == 0:
-                result += [0, 1, 0]
-            elif i == -1:
-                result += [0, 0, 1]
+    def vectorize(self) -> np.ndarray:
+        """Returns normalized vector that represents the position for NN training.
+        The shape of the state is (3, 3, 3)"""
+        result = np.zeros((3, 3, 3))
+        for i, v in enumerate(self.board):
+            if v == 1:
+                result[0][i // 3, i % 3] = 1
+            elif v == -1:
+                result[1][i // 3, i % 3] = 1
+        result[2][:,:] = (self.get_current_move() + 1) / 2
         return result
 
     def copy(self):
