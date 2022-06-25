@@ -1,7 +1,9 @@
 from Game import NUM_ACTIONS, Game, Position, position_from_image
 from NN import NN, NNModel
+from MCTS import Node, MCST
 import torch
 import numpy as np
+from typing import Tuple
 
 
 def test_position():
@@ -58,3 +60,18 @@ def test_nn():
         ),
     ]
     nn.train(batch)
+
+def test_node():
+    root = Node(None, 0)
+    game = Game()
+    probs = np.array([1] * NUM_ACTIONS) / NUM_ACTIONS
+    assert(root.is_leaf())
+    assert(root.is_root())
+    root.expand(game, probs)
+    _: Tuple[int, Node] = root.select()
+    action: int = _[0]
+    node: Node = _[1]
+    node.update_recursive(1)
+    assert(root._avg == -1)
+    assert(node._avg == 1)
+    
