@@ -55,7 +55,7 @@ class Position:
                 result[0][i // 3, i % 3] = 1
             elif v == -1:
                 result[1][i // 3, i % 3] = 1
-        result[2][:,:] = (self.get_current_move() + 1) / 2
+        result[2][:, :] = (self.get_current_move() + 1) / 2
         return result
 
     def copy(self):

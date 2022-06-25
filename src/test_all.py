@@ -28,11 +28,13 @@ def test_game():
     assert g.is_terminal() == True
     assert g.get_scores() == [1, 1, 1, 1, 1]
 
+
 def test_nnmodel():
     model = NNModel()
     pos = Position([1, -1, -1, 1, 0, 0, 1, 0, 0])
     pos_tensor = torch.from_numpy(pos.vectorize()).float()
     model.forward(pos_tensor)
+
 
 def test_nn():
     nn = NN()

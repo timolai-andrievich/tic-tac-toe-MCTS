@@ -9,11 +9,16 @@ BATCH_SIZE = 200
 GAME_COUNT = 100
 ITERATION_COUNT = 10000
 
+
 def pick_action(probs: Dict[int, float]) -> int:
     """Analyzes the list of actions with probabilities and returns the most appropriate one"""
 
-def make_target(probs: Dict[Image, Dict[int, float]], scores: List[float]) -> List[Tuple[Image, Tuple[Dict[int, float], float]]]:
+
+def make_target(
+    probs: Dict[Image, Dict[int, float]], scores: List[float]
+) -> List[Tuple[Image, Tuple[Dict[int, float], float]]]:
     """Compiles the probabilities of functions and final evaluation scores into one list and returns it"""
+
 
 def generate_game(network: NN) -> List[Tuple[Image, Tuple[Dict[int, float], float]]]:
     game = Game()
@@ -29,12 +34,15 @@ def generate_game(network: NN) -> List[Tuple[Image, Tuple[Dict[int, float], floa
     scores = game.get_scores()
     return make_target(probabilities, scores)
 
+
 def create_batch(network: NN) -> List[Tuple[Image, Tuple[Dict[int, float], float]]]:
     """Creates the batch of positions for training"""
+
 
 def train_iteration(network: NN):
     batch = create_batch()
     NN.train(batch)
+
 
 def train(network: NN):
     for i in range(ITERATION_COUNT):
