@@ -55,7 +55,7 @@ class Position:
                 result[0][i // 3, i % 3] = 1
             elif v == -1:
                 result[1][i // 3, i % 3] = 1
-        result[2][:,:] = (self.get_current_move() + 1) / 2
+        result[2][:, :] = (self.get_current_move() + 1) / 2
         return result
 
     def copy(self):
@@ -104,11 +104,10 @@ class Game:
     def copy(self):
         """Returns the copy of the game"""
         new_game = Game()
-        new_game._scores = self._scores
         new_game._num_actions = self._num_actions
         new_game._position = self._position
         new_game._positions = []
-        for pos in self._position:
+        for pos in self._positions:
             new_game._positions.append(pos.copy())
         return new_game
 
