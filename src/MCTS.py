@@ -5,8 +5,7 @@ from Game import Game, Position, NUM_ACTIONS
 from typing import Tuple, Dict, List
 import numpy as np
 
-c_impact = 0.2
-num_simulations = 10
+c_impact = 5
 
 
 class Node:
@@ -21,11 +20,13 @@ class Node:
 
     def select(self) -> Tuple[int, any]:
         """Selects the node with the best UCB score, and returns action leading to that node and the Node itself"""
-        return max(self._children.items(), key=lambda x: x[1].value())
+        res = max(self._children.items(), key=lambda x: x[1].value())
+        return res
 
     def expand(self, game: Game, action_probs: ndarray) -> None:
         """Expands the node"""
         legal_actions = set(game.get_actions())
+        action_probs = action_probs.reshape(9)
         for i in legal_actions:
             self._children[i] = Node(self, action_probs[i])
 
@@ -57,16 +58,17 @@ class Node:
 class MCST:
     """Represents the search tree"""
 
-    def __init__(self, game: Game, policy_function):
+    def __init__(self, game: Game, policy_function, num_simulations):
+        self.num_simulations = num_simulations
         self._game: Game = game
         self._policy = policy_function
         self._root = Node(None, 0)
 
     def run(self, game: Game, policy_function) -> Tuple[ndarray, float]:
         """Returns the list of probabilities of actions"""
-        for _ in range(num_simulations):
+        for _ in range(self.num_simulations):
             self.simulate(game.copy(), policy_function)
-        visits = np.array([node._visits for node in self._root._children.values()])
+        visits = np.array([self._root._children[i]._visits if i in self._root._children else 0 for i in range(9)])
         probs = visits / np.sum(visits)
         return probs, self._root._avg
 
@@ -75,6 +77,7 @@ class MCST:
         actions: List[int] = []
         node: Node = self._root
         while not node.is_leaf():
+            debug_old_node = node
             action, node = node.select()
             actions.append(action)
             game.commit_action(action)
@@ -86,13 +89,12 @@ class MCST:
             if winner == 0:
                 new_value = 0
             elif winner == game.get_current_move():
-                new_value = -1 
+                new_value = -1
             elif winner != game.get_current_move():
                 new_value = 1
-        node.update_recursive(new_value) 
-        
+        node.update_recursive(new_value)
+
     def commit_action(self, action: int):
         """Makes the subtree of the root corresponding to the action the new root, and discards all the other nodes"""
-        self._game.commit_action(action)
         self._root = self._root._children[action]
         self._root._parent = None

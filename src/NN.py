@@ -65,15 +65,17 @@ class NN:
             self._NN.load_state_dict(torch.load(file))
         else:
             self._NN = NNModel().to(self._device)
-        self.optimizer = torch.optim.Adam(self._NN.parameters())
+        self.optimizer = torch.optim.Adam(self._NN.parameters(), lr=2e-3)
 
     def policy_function(self, position: Position) -> Tuple[ndarray, float]:
         """Evaluates the position and returns probabilities of actions and evaluation score"""
         input = torch.from_numpy(position.vectorize()).float().to(self._device)
         act, val = self._NN(input)
-        return act.cpu().detach().numpy(), val[0]
+        return act.cpu().detach().numpy(), val.cpu().detach().numpy()[0]
 
-    def dump(self, file_name=f"models/model-{time.strftime('%H:%M:%S_%d-%m-%Y')}.mod"):
+    def dump(self, file_name: str = None, info: str = ""):
+        if file_name is None:
+            file_name = f"../models/model-{time.strftime('%H%M%S_%d-%m-%Y')}_{info}.pt"
         torch.save(self._NN.state_dict(), file_name)
 
     def train(self, batch: List[Tuple[Image, Tuple[ndarray, float]]]):

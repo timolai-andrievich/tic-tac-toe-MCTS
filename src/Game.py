@@ -61,6 +61,14 @@ class Position:
     def copy(self):
         return Position(self.board.copy())
 
+    def get_actions(self) -> List[int]:
+        """Returns the list of actions that are possible from the current position"""
+        result = []
+        for i, v in enumerate(self.board):
+            if not v:
+                result += [i]
+        return result
+
 
 def position_from_image(pos: Image) -> Position:
     """Returns the position from the image of the position"""
@@ -79,14 +87,6 @@ class Game:
         self._positions: List[Position] = []  # List of all the positions reached
         self._scores: Dict[Image, float]  # Evaluation scores of the positions
 
-    def get_actions(self) -> List[int]:
-        """Returns the list of actions that are possible from the current position"""
-        result = []
-        for i, v in enumerate(self._position.board):
-            if not v:
-                result += [i]
-        return result
-
     def is_terminal(self) -> bool:
         """Returns true if the position of the game is terminal"""
         return self._position.get_winner() or self._position.board.count(0) == 0
@@ -97,6 +97,14 @@ class Game:
             return 0
         return self._position.get_winner()
 
+    def get_actions(self) -> List[int]:
+        """Returns the list of actions that are possible from the current position"""
+        result = []
+        for i, v in enumerate(self._position.board):
+            if not v:
+                result += [i]
+        return result
+
     def get_current_move(self) -> int:
         """Returns 1 if player who moved first should move now, -1 if the player who moved second should move now"""
         return self._position.get_current_move()
@@ -105,7 +113,7 @@ class Game:
         """Returns the copy of the game"""
         new_game = Game()
         new_game._num_actions = self._num_actions
-        new_game._position = self._position
+        new_game._position = self._position.copy()
         new_game._positions = []
         for pos in self._positions:
             new_game._positions.append(pos.copy())

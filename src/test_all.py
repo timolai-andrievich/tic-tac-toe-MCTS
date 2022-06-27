@@ -61,24 +61,24 @@ def test_nn():
     ]
     nn.train(batch)
 
+
 def test_node():
     root = Node(None, 0)
     game = Game()
     probs = np.array([1] * NUM_ACTIONS) / NUM_ACTIONS
-    assert(root.is_leaf())
-    assert(root.is_root())
+    assert root.is_leaf()
+    assert root.is_root()
     root.expand(game, probs)
     _: Tuple[int, Node] = root.select()
     action: int = _[0]
     node: Node = _[1]
     node.update_recursive(1)
-    assert(root._avg == -1)
-    assert(node._avg == 1)
+    assert root._avg == -1
+    assert node._avg == 1
+
 
 def test_tree():
     nn = NN()
     game = Game()
     tree = MCST(game, nn.policy_function)
     tree.run(game, nn.policy_function)
-
-    
