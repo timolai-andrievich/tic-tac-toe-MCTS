@@ -1,7 +1,9 @@
 from Game import NUM_ACTIONS, Game, Position, position_from_image
 from NN import NN, NNModel
+from MCTS import Node, MCST
 import torch
 import numpy as np
+from typing import Tuple
 
 
 def test_position():
@@ -28,11 +30,13 @@ def test_game():
     assert g.is_terminal() == True
     assert g.get_scores() == [1, 1, 1, 1, 1]
 
+
 def test_nnmodel():
     model = NNModel()
     pos = Position([1, -1, -1, 1, 0, 0, 1, 0, 0])
     pos_tensor = torch.from_numpy(pos.vectorize()).float()
     model.forward(pos_tensor)
+
 
 def test_nn():
     nn = NN()
@@ -56,3 +60,25 @@ def test_nn():
         ),
     ]
     nn.train(batch)
+
+def test_node():
+    root = Node(None, 0)
+    game = Game()
+    probs = np.array([1] * NUM_ACTIONS) / NUM_ACTIONS
+    assert(root.is_leaf())
+    assert(root.is_root())
+    root.expand(game, probs)
+    _: Tuple[int, Node] = root.select()
+    action: int = _[0]
+    node: Node = _[1]
+    node.update_recursive(1)
+    assert(root._avg == -1)
+    assert(node._avg == 1)
+
+def test_tree():
+    nn = NN()
+    game = Game()
+    tree = MCST(game, nn.policy_function)
+    tree.run(game, nn.policy_function)
+
+    

@@ -2,7 +2,15 @@ from io import BytesIO, TextIOWrapper
 
 import numpy as np
 from numpy import ndarray
-from Game import Position, Image, BOARD_WIDTH, BOARD_HEIGHT, NUM_ACTIONS, NUM_LAYERS, position_from_image
+from Game import (
+    Position,
+    Image,
+    BOARD_WIDTH,
+    BOARD_HEIGHT,
+    NUM_ACTIONS,
+    NUM_LAYERS,
+    position_from_image,
+)
 from typing import Tuple, Dict, List
 import torch
 import torch.nn as nn
@@ -22,7 +30,9 @@ class NNModel(nn.Module):
         self.conv3 = nn.Conv2d(48, 96, kernel_size=2, padding=1)
 
         self.val_conv1 = nn.Conv2d(96, 3, kernel_size=1)
-        self.val_lin1 = nn.Linear(4 * 3 * BOARD_HEIGHT * BOARD_WIDTH, BOARD_HEIGHT * BOARD_WIDTH)
+        self.val_lin1 = nn.Linear(
+            4 * 3 * BOARD_HEIGHT * BOARD_WIDTH, BOARD_HEIGHT * BOARD_WIDTH
+        )
         self.val_lin2 = nn.Linear(BOARD_HEIGHT * BOARD_WIDTH, 1)
 
         self.act_conv1 = nn.Conv2d(96, 24, kernel_size=1)
@@ -42,7 +52,8 @@ class NNModel(nn.Module):
         x_act = x_act.view(-1, 4 * 24 * BOARD_HEIGHT * BOARD_WIDTH)
         x_act = F.softmax(self.act_lin1(x_act), dim=1)
 
-        return x_act, x_val[:,0]
+        return x_act, x_val[:, 0]
+
 
 class NN:
     """A wrapper for the network"""
@@ -85,5 +96,3 @@ class NN:
         loss = val_loss + act_loss
         loss.backward()
         self.optimizer.step()
-
-        
