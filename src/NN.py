@@ -19,37 +19,39 @@ import time
 import torch.optim
 
 
+FILTERS = 12
+BLOCKS = 0
+
 class NNModel(nn.Module):
     """Provides the interface for an neural network model"""
 
-    def __init__(self):
+    def __init__(self, device):
         super(NNModel, self).__init__()
 
-        self.conv1 = nn.Conv2d(3, 12, kernel_size=2, padding=1)
-        self.conv2 = nn.Conv2d(12, 48, kernel_size=2, padding=1)
-        self.conv3 = nn.Conv2d(48, 96, kernel_size=2, padding=1)
+        self.conv0 = nn.Conv2d(3, FILTERS, kernel_size=(3, 3), padding=1)
+        self.convs = []
+        for _ in range(BLOCKS):
+            self.convs.append(nn.Conv2d(FILTERS, FILTERS, kernel_size=(3, 3), padding=1).to(device))
 
-        self.val_conv1 = nn.Conv2d(96, 3, kernel_size=1)
-        self.val_lin1 = nn.Linear(
-            4 * 3 * BOARD_HEIGHT * BOARD_WIDTH, BOARD_HEIGHT * BOARD_WIDTH
-        )
+        self.val_conv1 = nn.Conv2d(FILTERS, 3, kernel_size=(3, 3), padding=1)
+        self.val_lin1 = nn.Linear(3 * BOARD_HEIGHT * BOARD_WIDTH, BOARD_HEIGHT * BOARD_WIDTH)
         self.val_lin2 = nn.Linear(BOARD_HEIGHT * BOARD_WIDTH, 1)
 
-        self.act_conv1 = nn.Conv2d(96, 24, kernel_size=1)
-        self.act_lin1 = nn.Linear(4 * 24 * BOARD_HEIGHT * BOARD_WIDTH, NUM_ACTIONS)
+        self.act_conv1 = nn.Conv2d(FILTERS, 3, kernel_size=(3, 3), padding=1)
+        self.act_lin1 = nn.Linear(3 * BOARD_HEIGHT * BOARD_WIDTH, NUM_ACTIONS)
 
     def forward(self, input):
-        x = F.relu(self.conv1(input))
-        x = F.relu(self.conv2(x))
-        x = F.relu(self.conv3(x))
+        x = F.relu(self.conv0(input))
+        for layer in self.convs:
+            x = F.relu(layer(x))
 
         x_val = F.relu(self.val_conv1(x))
-        x_val = x_val.view(-1, 3 * 4 * BOARD_HEIGHT * BOARD_WIDTH)
+        x_val = x_val.view(-1, 3 * BOARD_HEIGHT * BOARD_WIDTH)
         x_val = F.relu(self.val_lin1(x_val))
         x_val = torch.tanh(self.val_lin2(x_val))
 
         x_act = F.relu(self.act_conv1(x))
-        x_act = x_act.view(-1, 4 * 24 * BOARD_HEIGHT * BOARD_WIDTH)
+        x_act = x_act.view(-1, 3 * BOARD_HEIGHT * BOARD_WIDTH)
         x_act = F.softmax(self.act_lin1(x_act), dim=1)
 
         return x_act, x_val[:, 0]
@@ -61,11 +63,11 @@ class NN:
     def __init__(self, use_gpu=False, file=None):
         self._device = "cuda" if use_gpu else "cpu"
         if file:
-            self._NN = NNModel().to(self._device)
+            self._NN = NNModel(self._device).to(self._device)
             self._NN.load_state_dict(torch.load(file))
         else:
-            self._NN = NNModel().to(self._device)
-        self.optimizer = torch.optim.Adam(self._NN.parameters(), lr=2e-3)
+            self._NN = NNModel(self._device).to(self._device)
+        self.optimizer = torch.optim.Adam(self._NN.parameters(), lr=5e-3, weight_decay=1e-4)
 
     def policy_function(self, position: Position) -> Tuple[ndarray, float]:
         """Evaluates the position and returns probabilities of actions and evaluation score"""

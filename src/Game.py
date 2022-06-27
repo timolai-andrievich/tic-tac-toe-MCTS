@@ -69,6 +69,11 @@ class Position:
                 result += [i]
         return result
 
+    def with_move(self, action: int):
+        nb = self.board.copy()
+        nb[action] = self.get_current_move()
+        return Position(nb)
+
 
 def position_from_image(pos: Image) -> Position:
     """Returns the position from the image of the position"""
@@ -81,9 +86,9 @@ START_POSITION: Position = Position([0] * 9)
 class Game:
     """Describes the logic of the game and provides appropriate interface"""
 
-    def __init__(self):
+    def __init__(self, position=START_POSITION):
         self._num_actions: int = NUM_ACTIONS  # Number of actions possible in the game
-        self._position: Position = START_POSITION  # Current in-game position
+        self._position: Position = position  # Current in-game position
         self._positions: List[Position] = []  # List of all the positions reached
         self._scores: Dict[Image, float]  # Evaluation scores of the positions
 

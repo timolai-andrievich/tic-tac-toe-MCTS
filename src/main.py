@@ -8,11 +8,11 @@ import tqdm
 import random
 
 iteration_count = 10000
-games_in_iteration = 100
+games_in_iteration = 10
 mcts_playout = 100
-batch_size = 512
-checkpoints = 100
-test_cp = 10
+batch_size = -1
+checkpoints = 300
+test_cp = 20
 
 
 def make_batch(
@@ -52,17 +52,29 @@ def train(file_name=None):
     nn.dump()
     return nn
 
+
 def test(nn: NN):
     print(f'Should be 0: {nn.policy_function(START_POSITION)[1]}')
     print(f'Should be 1: {nn.policy_function(Position([0, 0, 0,-1, 1, 0, 0, 0, 0]))[1]}')
     print(f'Should be 1, but more obvious: {nn.policy_function(Position([1, 1, 0,-1, 0, 0,-1, 0, 0]))[1]}')
     print(f'Should be -1, obvious: {nn.policy_function(Position([-1,-1, 0, 1, 0, 0, 1, 0, 0]))[1]}')
+    game = Game().copy()
+    tree = MCST(game.copy(), nn.policy_function, mcts_playout)
+    print(f'Should be 0, MCTS: {tree.run(game.copy(), nn.policy_function)[1]}')
+    game.commit_action(4)
+    tree.commit_action(4)
+    game.commit_action(3)
+    tree.commit_action(3)
+    print(f'Should be 1, MCTS: {tree.run(game.copy(), nn.policy_function)[1]}')
+    game.commit_action(0)
+    tree.commit_action(0)
+    print(f'Should be 1, MCTS: {tree.run(game.copy(), nn.policy_function)[1]}')
 
 
 def test_mcts():
     nn = NN()
     game = Game()
-    tree = MCST(game.copy(), nn.policy_function, 20000)
+    tree = MCST(game.copy(), nn.policy_function, 500)
     print(tree.run(game.copy(), nn.policy_function))
     game.commit_action(4)
     tree.commit_action(4)
@@ -75,9 +87,9 @@ def test_mcts():
 
 
 def main():
-    test_mcts()
-    #nn = train()
-    #test(nn)
+    #test_mcts()
+    nn = train()
+    test(nn)
 
 
 if __name__ == "__main__":

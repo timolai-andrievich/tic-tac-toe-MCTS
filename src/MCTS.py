@@ -1,7 +1,7 @@
 from hashlib import new
 from numpy import ndarray
 from torch import le
-from Game import Game, Position, NUM_ACTIONS
+from Game import Game, Position, NUM_ACTIONS, START_POSITION
 from typing import Tuple, Dict, List
 import numpy as np
 
@@ -11,7 +11,8 @@ c_impact = 5
 class Node:
     """Represents a node in the Monte-Carlo search tree"""
 
-    def __init__(self, parent, prior: float):
+    def __init__(self, parent, prior: float, current_move: int):
+        self.current_move: int = current_move
         self._parent: Node = parent
         self._prior: float = prior
         self._children: Dict[int, Node] = {}
@@ -20,15 +21,14 @@ class Node:
 
     def select(self) -> Tuple[int, any]:
         """Selects the node with the best UCB score, and returns action leading to that node and the Node itself"""
-        res = max(self._children.items(), key=lambda x: x[1].value())
-        return res
+        return max(self._children.items(), key=lambda x: x[1].value())
 
     def expand(self, game: Game, action_probs: ndarray) -> None:
         """Expands the node"""
         legal_actions = set(game.get_actions())
         action_probs = action_probs.reshape(9)
         for i in legal_actions:
-            self._children[i] = Node(self, action_probs[i])
+            self._children[i] = Node(self, action_probs[i], self.current_move * -1)
 
     def is_leaf(self) -> bool:
         """Returns True if the node is a leaf, false otherwise"""
@@ -41,7 +41,7 @@ class Node:
     def value(self) -> float:
         """Returns the UCB score of the node"""
         u = c_impact * self._prior * (self._parent._visits) ** 0.5 / (1 + self._visits)
-        return self._avg + u
+        return self._avg * self.current_move * -1 + u
 
     def update(self, new_score):
         """Update the score of the node"""
@@ -52,7 +52,7 @@ class Node:
         """Update the value of the node, and the value of its parents"""
         self.update(new_score)
         if not self.is_root():
-            self._parent.update_recursive(-new_score)
+            self._parent.update_recursive(new_score)
 
 
 class MCST:
@@ -62,7 +62,7 @@ class MCST:
         self.num_simulations = num_simulations
         self._game: Game = game
         self._policy = policy_function
-        self._root = Node(None, 0)
+        self._root = Node(None, 0, 1)
 
     def run(self, game: Game, policy_function) -> Tuple[ndarray, float]:
         """Returns the list of probabilities of actions"""
@@ -92,9 +92,13 @@ class MCST:
                 new_value = -1
             elif winner != game.get_current_move():
                 new_value = 1
+            new_value = winner
         node.update_recursive(new_value)
 
     def commit_action(self, action: int):
         """Makes the subtree of the root corresponding to the action the new root, and discards all the other nodes"""
-        self._root = self._root._children[action]
+        if self._root.is_leaf():
+            self._root = Node(None, 0, self._root.current_move * -1)
+        else:
+            self._root = self._root._children[action]
         self._root._parent = None
