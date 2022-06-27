@@ -74,4 +74,11 @@ def test_node():
     node.update_recursive(1)
     assert(root._avg == -1)
     assert(node._avg == 1)
+
+def test_tree():
+    nn = NN()
+    game = Game()
+    tree = MCST(game, nn.policy_function)
+    tree.run(game, nn.policy_function)
+
     
