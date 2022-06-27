@@ -6,7 +6,7 @@ import numpy as np
 NUM_ACTIONS: int = 9  # Game-specific
 BOARD_WIDTH = 3
 BOARD_HEIGHT = 3
-NUM_LAYERS = 3
+NUM_LAYERS = 4
 Image = str
 
 
@@ -48,18 +48,46 @@ class Position:
 
     def vectorize(self) -> np.ndarray:
         """Returns normalized vector that represents the position for NN training.
-        The shape of the state is (3, 3, 3)"""
-        result = np.zeros((3, 3, 3))
+        The shape of the state is (4, 3, 3)"""
+        result = np.zeros((NUM_LAYERS, 3, 3))
         for i, v in enumerate(self.board):
             if v == 1:
                 result[0][i // 3, i % 3] = 1
             elif v == -1:
                 result[1][i // 3, i % 3] = 1
         result[2][:, :] = (self.get_current_move() + 1) / 2
+        result[3] = np.array(self.board).reshape((3, 3))
         return result
 
     def copy(self):
         return Position(self.board.copy())
+
+    def get_actions(self) -> List[int]:
+        """Returns the list of actions that are possible from the current position"""
+        result = []
+        for i, v in enumerate(self.board):
+            if not v:
+                result += [i]
+        return result
+
+    def with_move(self, action: int):
+        nb = self.board.copy()
+        nb[action] = self.get_current_move()
+        return Position(nb)
+
+    def visualize(self) -> str:
+        b = []
+        res = ''
+        for i in self.board:
+            if i == 1:
+                b += ['X']
+            if i == -1:
+                b += ['O']
+            if i == 0:
+                b += ['.']
+        for i in range(0, 9, 3):
+            res += ''.join(b[i:i+3]) + '\n'
+        return res
 
 
 def position_from_image(pos: Image) -> Position:
@@ -73,19 +101,11 @@ START_POSITION: Position = Position([0] * 9)
 class Game:
     """Describes the logic of the game and provides appropriate interface"""
 
-    def __init__(self):
+    def __init__(self, position=START_POSITION):
         self._num_actions: int = NUM_ACTIONS  # Number of actions possible in the game
-        self._position: Position = START_POSITION  # Current in-game position
+        self._position: Position = position  # Current in-game position
         self._positions: List[Position] = []  # List of all the positions reached
         self._scores: Dict[Image, float]  # Evaluation scores of the positions
-
-    def get_actions(self) -> List[int]:
-        """Returns the list of actions that are possible from the current position"""
-        result = []
-        for i, v in enumerate(self._position.board):
-            if not v:
-                result += [i]
-        return result
 
     def is_terminal(self) -> bool:
         """Returns true if the position of the game is terminal"""
@@ -97,6 +117,14 @@ class Game:
             return 0
         return self._position.get_winner()
 
+    def get_actions(self) -> List[int]:
+        """Returns the list of actions that are possible from the current position"""
+        result = []
+        for i, v in enumerate(self._position.board):
+            if not v:
+                result += [i]
+        return result
+
     def get_current_move(self) -> int:
         """Returns 1 if player who moved first should move now, -1 if the player who moved second should move now"""
         return self._position.get_current_move()
@@ -105,7 +133,7 @@ class Game:
         """Returns the copy of the game"""
         new_game = Game()
         new_game._num_actions = self._num_actions
-        new_game._position = self._position
+        new_game._position = self._position.copy()
         new_game._positions = []
         for pos in self._positions:
             new_game._positions.append(pos.copy())

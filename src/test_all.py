@@ -32,7 +32,7 @@ def test_game():
 
 
 def test_nnmodel():
-    model = NNModel()
+    model = NNModel('cpu')
     pos = Position([1, -1, -1, 1, 0, 0, 1, 0, 0])
     pos_tensor = torch.from_numpy(pos.vectorize()).float()
     model.forward(pos_tensor)
@@ -61,24 +61,24 @@ def test_nn():
     ]
     nn.train(batch)
 
+
 def test_node():
-    root = Node(None, 0)
+    root = Node(None, 0, 1)
     game = Game()
     probs = np.array([1] * NUM_ACTIONS) / NUM_ACTIONS
-    assert(root.is_leaf())
-    assert(root.is_root())
+    assert root.is_leaf()
+    assert root.is_root()
     root.expand(game, probs)
     _: Tuple[int, Node] = root.select()
     action: int = _[0]
     node: Node = _[1]
-    node.update_recursive(1)
-    assert(root._avg == -1)
-    assert(node._avg == 1)
+    node.update_recursive(np.array([0, 1, 0]))
+    assert (root.results == np.array([0, 1, 0])).all()
+    assert (node.results == np.array([0, 1, 0])).all()
+
 
 def test_tree():
     nn = NN()
     game = Game()
-    tree = MCST(game, nn.policy_function)
+    tree = MCST(game, nn.policy_function, 10)
     tree.run(game, nn.policy_function)
-
-    
