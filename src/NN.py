@@ -29,9 +29,9 @@ class NNModel(nn.Module):
         super(NNModel, self).__init__()
 
         self.conv0 = nn.Conv2d(3, FILTERS, kernel_size=(3, 3), padding=1)
-        self.convs = []
-        for _ in range(BLOCKS):
-            self.convs.append(nn.Conv2d(FILTERS, FILTERS, kernel_size=(3, 3), padding=1).to(device))
+        self.conv1 = nn.Conv2d(FILTERS, FILTERS, kernel_size=(3, 3), padding=1)
+        self.conv2 = nn.Conv2d(FILTERS, FILTERS, kernel_size=(3, 3), padding=1)
+        self.conv3 = nn.Conv2d(FILTERS, FILTERS, kernel_size=(3, 3), padding=1)
 
         self.val_conv1 = nn.Conv2d(FILTERS, 3, kernel_size=(3, 3), padding=1)
         self.val_lin1 = nn.Linear(3 * BOARD_HEIGHT * BOARD_WIDTH, BOARD_HEIGHT * BOARD_WIDTH)
@@ -42,8 +42,9 @@ class NNModel(nn.Module):
 
     def forward(self, input):
         x = F.relu(self.conv0(input))
-        for layer in self.convs:
-            x = F.relu(layer(x))
+        x = F.relu(self.conv1(x))
+        x = F.relu(self.conv2(x))
+        x = F.relu(self.conv3(x))
 
         x_val = F.relu(self.val_conv1(x))
         x_val = x_val.view(-1, 3 * BOARD_HEIGHT * BOARD_WIDTH)
@@ -61,13 +62,13 @@ class NN:
     """A wrapper for the network"""
 
     def __init__(self, use_gpu=False, file=None):
-        self._device = "cuda" if use_gpu else "cpu"
+        self._device = "cuda" if torch.cuda.is_available() else "cpu"
         if file:
             self._NN = NNModel(self._device).to(self._device)
             self._NN.load_state_dict(torch.load(file))
         else:
             self._NN = NNModel(self._device).to(self._device)
-        self.optimizer = torch.optim.Adam(self._NN.parameters(), lr=5e-3, weight_decay=1e-4)
+        self.optimizer = torch.optim.Adam(self._NN.parameters(), lr=2e-3, weight_decay=1e-4)
 
     def policy_function(self, position: Position) -> Tuple[ndarray, float]:
         """Evaluates the position and returns probabilities of actions and evaluation score"""
@@ -77,7 +78,7 @@ class NN:
 
     def dump(self, file_name: str = None, info: str = ""):
         if file_name is None:
-            file_name = f"../models/model-{time.strftime('%H%M%S_%d-%m-%Y')}_{info}.pt"
+            file_name = f"../models/model-{time.strftime('%Y%m%d_%H%M%S')}_{info}.pt"
         torch.save(self._NN.state_dict(), file_name)
 
     def train(self, batch: List[Tuple[Image, Tuple[ndarray, float]]]):
