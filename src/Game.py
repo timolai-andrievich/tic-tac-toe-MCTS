@@ -6,7 +6,7 @@ import numpy as np
 NUM_ACTIONS: int = 9  # Game-specific
 BOARD_WIDTH = 3
 BOARD_HEIGHT = 3
-NUM_LAYERS = 3
+NUM_LAYERS = 4
 Image = str
 
 
@@ -48,14 +48,15 @@ class Position:
 
     def vectorize(self) -> np.ndarray:
         """Returns normalized vector that represents the position for NN training.
-        The shape of the state is (3, 3, 3)"""
-        result = np.zeros((3, 3, 3))
+        The shape of the state is (4, 3, 3)"""
+        result = np.zeros((NUM_LAYERS, 3, 3))
         for i, v in enumerate(self.board):
             if v == 1:
                 result[0][i // 3, i % 3] = 1
             elif v == -1:
                 result[1][i // 3, i % 3] = 1
         result[2][:, :] = (self.get_current_move() + 1) / 2
+        result[3] = np.array(self.board).reshape((3, 3))
         return result
 
     def copy(self):

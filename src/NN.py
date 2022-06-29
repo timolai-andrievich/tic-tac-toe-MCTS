@@ -19,8 +19,8 @@ import time
 import torch.optim
 
 
-FILTERS = 12
-BLOCKS = 0
+FILTERS = NUM_LAYERS * 32
+BLOCKS = 3
 
 class NNModel(nn.Module):
     """Provides the interface for an neural network model"""
@@ -28,17 +28,16 @@ class NNModel(nn.Module):
     def __init__(self, device):
         super(NNModel, self).__init__()
 
-        self.conv0 = nn.Conv2d(3, FILTERS, kernel_size=(3, 3), padding=1)
-        self.conv1 = nn.Conv2d(FILTERS, FILTERS, kernel_size=(3, 3), padding=1)
-        self.conv2 = nn.Conv2d(FILTERS, FILTERS, kernel_size=(3, 3), padding=1)
-        self.conv3 = nn.Conv2d(FILTERS, FILTERS, kernel_size=(3, 3), padding=1)
+        self.conv0 = nn.Conv2d(NUM_LAYERS, FILTERS, kernel_size=(3, 3), padding=(1, 1))
+        self.conv1 = nn.Conv2d(FILTERS, FILTERS, kernel_size=(3, 3), padding=(1, 1))
+        self.conv2 = nn.Conv2d(FILTERS, FILTERS, kernel_size=(3, 3), padding=(1, 1))
+        self.conv3 = nn.Conv2d(FILTERS, FILTERS, kernel_size=(3, 3), padding=(1, 1))
 
-        self.val_conv1 = nn.Conv2d(FILTERS, 3, kernel_size=(3, 3), padding=1)
-        self.val_lin1 = nn.Linear(3 * BOARD_HEIGHT * BOARD_WIDTH, BOARD_HEIGHT * BOARD_WIDTH)
-        self.val_lin2 = nn.Linear(BOARD_HEIGHT * BOARD_WIDTH, 1)
+        self.val_conv1 = nn.Conv2d(FILTERS, NUM_LAYERS, kernel_size=(3, 3), padding=(1, 1))
+        self.val_lin1 = nn.Linear(NUM_LAYERS * BOARD_HEIGHT * BOARD_WIDTH, 3)
 
-        self.act_conv1 = nn.Conv2d(FILTERS, 3, kernel_size=(3, 3), padding=1)
-        self.act_lin1 = nn.Linear(3 * BOARD_HEIGHT * BOARD_WIDTH, NUM_ACTIONS)
+        self.act_conv1 = nn.Conv2d(FILTERS, NUM_LAYERS, kernel_size=(3, 3), padding=(1, 1))
+        self.act_lin1 = nn.Linear(NUM_LAYERS * BOARD_HEIGHT * BOARD_WIDTH, NUM_ACTIONS)
 
     def forward(self, input):
         x = F.relu(self.conv0(input))
@@ -47,15 +46,14 @@ class NNModel(nn.Module):
         x = F.relu(self.conv3(x))
 
         x_val = F.relu(self.val_conv1(x))
-        x_val = x_val.view(-1, 3 * BOARD_HEIGHT * BOARD_WIDTH)
-        x_val = F.relu(self.val_lin1(x_val))
-        x_val = torch.tanh(self.val_lin2(x_val))
+        x_val = x_val.view(-1, NUM_LAYERS * BOARD_HEIGHT * BOARD_WIDTH)
+        x_val = F.softmax(self.val_lin1(x_val), dim=1)
 
         x_act = F.relu(self.act_conv1(x))
-        x_act = x_act.view(-1, 3 * BOARD_HEIGHT * BOARD_WIDTH)
+        x_act = x_act.view(-1, NUM_LAYERS * BOARD_HEIGHT * BOARD_WIDTH)
         x_act = F.softmax(self.act_lin1(x_act), dim=1)
 
-        return x_act, x_val[:, 0]
+        return x_act, x_val
 
 
 class NN:
@@ -70,11 +68,11 @@ class NN:
             self._NN = NNModel(self._device).to(self._device)
         self.optimizer = torch.optim.Adam(self._NN.parameters(), lr=2e-3, weight_decay=1e-4)
 
-    def policy_function(self, position: Position) -> Tuple[ndarray, float]:
+    def policy_function(self, position: Position) -> Tuple[ndarray, ndarray]:
         """Evaluates the position and returns probabilities of actions and evaluation score"""
         input = torch.from_numpy(position.vectorize()).float().to(self._device)
         act, val = self._NN(input)
-        return act.cpu().detach().numpy(), val.cpu().detach().numpy()[0]
+        return act.cpu().detach().numpy(), val.cpu().detach().numpy()
 
     def dump(self, file_name: str = None, info: str = ""):
         if file_name is None:
@@ -86,7 +84,7 @@ class NN:
         self.optimizer.zero_grad()
         x = np.zeros((len(batch), NUM_LAYERS, BOARD_HEIGHT, BOARD_WIDTH))
         y_act = np.zeros((len(batch), NUM_ACTIONS))
-        y_val = np.zeros((len(batch)))
+        y_val = np.zeros((len(batch), 3))
         for i in range(len(batch)):
             img, (act, val) = batch[i]
             x[i] = position_from_image(img).vectorize()
