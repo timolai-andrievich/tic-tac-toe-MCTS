@@ -6,6 +6,9 @@ import torch.nn.functional as F
 from Game import Game, Position, NUM_ACTIONS, START_POSITION
 from typing import Tuple, Dict, List
 import numpy as np
+import math
+
+probs_to_eval = np.array([0, 1, -1])
 
 c_impact = 5
 
@@ -19,8 +22,10 @@ class Node:
         self._prior: float = prior
         self._children: Dict[int, Node] = {}
         self._visits: int = 0
-        self._avg: float = 0
-        self.results = np.array([0, 0, 0])
+        self.results = np.array([0.0, 0.0, 0.0])
+
+    def avg(self):
+        return self.results.dot(probs_to_eval)
 
     def select(self) -> Tuple[int, any]:
         """Selects the node with the best UCB score, and returns action leading to that node and the Node itself"""
@@ -43,16 +48,16 @@ class Node:
 
     def value(self) -> float:
         """Returns the UCB score of the node"""
-        u = c_impact * self._prior * (self._parent._visits) ** 0.5 / (1 + self._visits)
-        return self._avg * self.current_move * -1 + u
+        return self.cval()
 
     def update(self, new_score):
         """Update the score of the node"""
         self._visits += 1
-        self.results[round(new_score)] += 1
-        self._avg += (new_score - self._avg) / self._visits
+        self.results += new_score
 
-
+    def cval(self):
+        return self.avg() * self.current_move * -1 + c_impact * self._prior * math.sqrt(self._parent._visits) / (1 + self._visits)
+    
     def update_recursive(self, new_score):
         """Update the value of the node, and the value of its parents"""
         self.update(new_score)
@@ -82,16 +87,17 @@ class MCST:
         actions: List[int] = []
         node: Node = self._root
         while not node.is_leaf():
-            debug_old_node = node
             action, node = node.select()
             actions.append(action)
             game.commit_action(action)
         if not game.is_terminal():
-            probs, result_probs = policy_function(game._position)
+            probs, new_value = policy_function(game._position)
+            new_value = new_value[0]
             node.expand(game, probs)
-            new_value = result_probs.dot(np.array([0, 1, -1]))[0]
         else:
-            new_value = game.get_winner()
+            winner = game.get_winner()
+            new_value = np.zeros(3)
+            new_value[winner] = 1
         node.update_recursive(new_value)
 
     def commit_action(self, action: int):

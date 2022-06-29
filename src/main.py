@@ -267,8 +267,7 @@ def models_tournament_round():
     for model, (t, w, l) in sorted_models:
         print(f'{model}: +{w}-{l}={t}')
 
-
-def main():
+def profile():
     import pstats
     with cProfile.Profile() as p:
         train()
@@ -276,6 +275,8 @@ def main():
     stats.sort_stats(pstats.SortKey.TIME)
     stats.print_stats()
 
+def main():
+    profile()
 
 if __name__ == "__main__":
     main()
