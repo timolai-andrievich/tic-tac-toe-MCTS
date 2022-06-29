@@ -19,7 +19,7 @@ batch_size = -1
 checkpoints = 10
 test_cp = 10
 random_playout = 6000
-test_games = 50
+test_games = 10
 intermediate_test_games = 10
 exploration_noise = .2
 
@@ -165,8 +165,6 @@ def models_play(nn1: NN, nn2: NN, first_starts: bool):
     i: int = 0
     while not game.is_terminal():
         probs, _ = trees[i & 1].run(game.copy(), policies[i & 1])
-        #action = np.argmax(probs)
-        probs = probs * (1 - exploration_noise) + exploration_noise * np.random.dirichlet(np.ones(NUM_ACTIONS))
         legal_actions = game.get_actions()
         for a in range(NUM_ACTIONS):
             if not a in legal_actions:
@@ -276,7 +274,7 @@ def profile():
     stats.print_stats()
 
 def main():
-    profile()
+    models_tournament_round()
 
 if __name__ == "__main__":
     main()
