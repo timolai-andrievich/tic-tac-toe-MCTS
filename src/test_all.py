@@ -72,9 +72,9 @@ def test_node():
     _: Tuple[int, Node] = root.select()
     action: int = _[0]
     node: Node = _[1]
-    node.update_recursive(1)
-    assert root._avg == 1
-    assert node._avg == 1
+    node.update_recursive(np.array([0, 1, 0]))
+    assert (root.results == np.array([0, 1, 0])).all()
+    assert (node.results == np.array([0, 1, 0])).all()
 
 
 def test_tree():

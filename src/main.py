@@ -2,6 +2,7 @@ import cProfile
 import glob
 import itertools
 from os import stat
+from turtle import pos
 import numpy as np
 from torch import rand
 from Game import NUM_ACTIONS, Game, Image, START_POSITION, Position
@@ -19,7 +20,7 @@ batch_size = -1
 checkpoints = 10
 test_cp = 10
 random_playout = 6000
-test_games = 10
+test_games = 100
 intermediate_test_games = 10
 exploration_noise = .2
 
@@ -170,7 +171,8 @@ def models_play(nn1: NN, nn2: NN, first_starts: bool):
             if not a in legal_actions:
                 probs[a] = 0
         probs = probs / probs.sum()
-        action = np.random.choice(NUM_ACTIONS, p=probs)
+        # action = np.random.choice(NUM_ACTIONS, p=probs)
+        action = np.argmax(probs)
         trees[0].commit_action(action)
         trees[1].commit_action(action)
         game.commit_action(action)
@@ -273,8 +275,43 @@ def profile():
     stats.sort_stats(pstats.SortKey.TIME)
     stats.print_stats()
 
+def show_moves(nn: NN):
+    positions = [
+        [
+            0, 0, 0,
+            0, 0, 0,
+            0, 0, 0,
+        ],
+        [
+            0, 0, 0,
+            0, 1, 0,
+            0, 0, 0,
+        ],
+        [
+            0, 0, 0,
+            -1, 1, 0,
+            0, 0, 0,
+        ],
+    ]
+    positions = [Position(p) for p in positions]
+    for position in positions:
+        probs, eval = nn.policy_function(position)
+        l = position.get_actions()
+        for i in range(NUM_ACTIONS):
+            if not i in l:
+                probs[i] = 0
+            probs /= probs.sum()
+        action = np.argmax(probs)
+        new_position = position.with_move(action)
+        print(f'{position.visualize()}\n{probs}\n{new_position.visualize()}\n\n')
+
+
 def main():
     models_tournament_round()
+    for model in glob.glob('../models/*'):
+        print(f'{model}:')
+        show_moves(NN(file=model))
+    # models_tournament_round()
 
 if __name__ == "__main__":
     main()

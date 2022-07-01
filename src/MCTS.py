@@ -92,7 +92,6 @@ class MCST:
             game.commit_action(action)
         if not game.is_terminal():
             probs, new_value = policy_function(game._position)
-            new_value = new_value[0]
             node.expand(game, probs)
         else:
             winner = game.get_winner()

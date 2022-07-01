@@ -72,7 +72,7 @@ class NN:
         """Evaluates the position and returns probabilities of actions and evaluation score"""
         input = torch.from_numpy(position.vectorize()).float().to(self._device)
         act, val = self._NN(input)
-        return act.cpu().detach().numpy(), val.cpu().detach().numpy()
+        return act.cpu().detach().numpy()[0], val.cpu().detach().numpy()[0]
 
     def dump(self, file_name: str = None, info: str = ""):
         if file_name is None:

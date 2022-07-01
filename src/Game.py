@@ -75,6 +75,20 @@ class Position:
         nb[action] = self.get_current_move()
         return Position(nb)
 
+    def visualize(self) -> str:
+        b = []
+        res = ''
+        for i in self.board:
+            if i == 1:
+                b += ['X']
+            if i == -1:
+                b += ['O']
+            if i == 0:
+                b += ['.']
+        for i in range(0, 9, 3):
+            res += ''.join(b[i:i+3]) + '\n'
+        return res
+
 
 def position_from_image(pos: Image) -> Position:
     """Returns the position from the image of the position"""
