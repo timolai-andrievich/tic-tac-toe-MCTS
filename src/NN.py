@@ -28,19 +28,14 @@ class PolicyNN(Model):
     def __init__(self):
         super(PolicyNN, self).__init__()
 
-        self.conv0 = Conv2D(16, kernel_size=(3, 3), padding='same', activation='relu',
-                            input_shape=(None, BOARD_HEIGHT, BOARD_WIDTH, NUM_LAYERS))
-        self.conv1 = Conv2D(4, kernel_size=(3, 3), padding='same', activation='relu',
-                            input_shape=(None, BOARD_HEIGHT, BOARD_WIDTH, 32))
-        self.conv2 = Conv2D(1, kernel_size=(3, 3), padding='same', activation='relu',
-                            input_shape=(None, BOARD_HEIGHT, BOARD_WIDTH, 4))
+        self.conv0 = Conv2D(16, kernel_size=(3, 3), padding='same', activation='relu')
+        self.conv1 = Conv2D(1, kernel_size=(3, 3), padding='same', activation='relu')
         self.flatten = Flatten(input_shape=(None, BOARD_HEIGHT, BOARD_WIDTH, 1))
         self.lin1 = Dense(NUM_ACTIONS, input_shape=(None, BOARD_HEIGHT * BOARD_WIDTH * 1), activation='softmax')
 
     def call(self, input):
         input = self.conv0(input)
         input = self.conv1(input)
-        input = self.conv2(input)
         input = self.flatten(input)
         input = self.lin1(input)
         return input
@@ -53,15 +48,14 @@ class ValueNN(Model):
 
         self.conv0 = Conv2D(16, kernel_size=(3, 3), padding='same',
             input_shape=(None, BOARD_HEIGHT, BOARD_WIDTH, NUM_LAYERS), activation='relu')
-        self.conv1 = Conv2D(4, kernel_size=(3, 3), padding='same', activation='relu')
-        self.conv2 = Conv2D(1, kernel_size=(3, 3), padding='same', activation='relu')
+        self.conv1 = Conv2D(1, kernel_size=(3, 3), padding='same',
+            input_shape=(None, BOARD_HEIGHT, BOARD_WIDTH, 16), activation='relu')
         self.flatten = Flatten()
         self.lin1 = Dense(3, activation='softmax')
 
     def call(self, input):
         input = self.conv0(input)
         input = self.conv1(input)
-        input = self.conv2(input)
         input = self.flatten(input)
         input = self.lin1(input)
         return input
@@ -69,12 +63,19 @@ class ValueNN(Model):
 class NN:
     """A wrapper for the network"""
 
-    def __init__(self, file=None):
-        self.policyNN = PolicyNN()
-        self.valueNN = ValueNN()
+    def __init__(self, policy_file=None, value_file=None):
         self.loss = CategoricalCrossentropy()
         self.valueOptimizer = Adam()
         self.policyOptimizer = Adam()
+        if policy_file:
+            self.policyNN = tf.keras.models.load_model(policy_file)
+        else:
+            self.policyNN = PolicyNN()
+        if value_file:
+            self.valueNN = tf.keras.models.load_model(value_file)
+        else:
+            self.valueNN = ValueNN()
+
 
     def policy_function(self, position: Position) -> Tuple[ndarray, ndarray]:
         """Evaluates the position and returns probabilities of actions and evaluation score"""
@@ -85,8 +86,9 @@ class NN:
 
     def dump(self, file_name: str = None, info: str = ""):
         if file_name is None:
-            file_name = f"../models/model-{time.strftime('%Y%m%d_%H%M%S')}_{info}.pt"
-        # TODO
+            file_name = f"../models/model-{time.strftime('%Y%m%d_%H%M%S')}{'_' if info else ''}{info}"
+        self.valueNN.save(f"{file_name}_value.tf")
+        self.policyNN.save(f"{file_name}_policy.tf")
 
     def train(self, batch: List[Tuple[Image, Tuple[ndarray, float]]]):
         """Trains the NN on a batch of data collected from self-play"""

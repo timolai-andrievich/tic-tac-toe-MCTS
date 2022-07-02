@@ -13,16 +13,18 @@ from numpy import ndarray
 import tqdm
 import random
 
-iteration_count = 1
-games_in_iteration = 50
-mcts_playout = 50
+iteration_count = 100
+games_in_iteration = 10
+mcts_playout = 100
 batch_size = -1
 checkpoints = 10
-test_cp = 10
+test_cp = 1
 random_playout = 6000
 test_games = 100
 intermediate_test_games = 10
-exploration_noise = .2
+starting_exploration_noise = 1
+exploration_decay = .95
+min_exploration_noise = .15
 
 
 def make_batch(
@@ -37,8 +39,9 @@ def make_batch(
     return batch
 
 
-def train(file_name=None):
-    nn = NN(file=file_name)
+def train(policy_file=None, value_file=None):
+    nn = NN(policy_file=policy_file, value_file=value_file)
+    exploration_noise = starting_exploration_noise
     for i in tqdm.tqdm(range(iteration_count)):
         training_data: List[Tuple[Image, Tuple[ndarray, float]]] = []
         for _ in range(games_in_iteration):
@@ -65,6 +68,9 @@ def train(file_name=None):
             nn.dump(info=f'iteration_{i}')
         if i % test_cp == 0:
             intermediate_test(nn)
+        exploration_noise *= exploration_decay
+        if exploration_noise < min_exploration_noise:
+            exploration_noise = min_exploration_noise
     nn.dump()
     return nn
 
@@ -130,15 +136,16 @@ def intermediate_test(nn: NN):
     print(f'Should be -1, obvious: {nn.policy_function(Position([-1,-1, 0, 1, 0, 0, 1, 0, 0]))[1]}')
     game = Game().copy()
     tree = MCST(game.copy(), nn.policy_function, mcts_playout)
-    print(f'Should be 0, MCTS: {tree.run(game.copy(), nn.policy_function)[1]}')
+    print(f'Should be 0, MCTS: {tree.run(game.copy(), nn.policy_function)}')
     game.commit_action(4)
     tree.commit_action(4)
     game.commit_action(3)
     tree.commit_action(3)
-    print(f'Should be 1, MCTS: {tree.run(game.copy(), nn.policy_function)[1]}')
+    print(f'Should be 1, MCTS: {tree.run(game.copy(), nn.policy_function)}')
     game.commit_action(0)
     tree.commit_action(0)
-    print(f'Should be 1, MCTS: {tree.run(game.copy(), nn.policy_function)[1]}')
+    print(f'Should be 1, MCTS: {tree.run(game.copy(), nn.policy_function)}')
+    show_moves(nn)
 
 def models_test():
     models = []
@@ -307,7 +314,6 @@ def show_moves(nn: NN):
 
 
 def main():
-    profile()
     train()
 
 if __name__ == "__main__":
