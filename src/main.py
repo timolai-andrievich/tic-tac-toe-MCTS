@@ -15,7 +15,7 @@ import random
 
 iteration_count = 1
 games_in_iteration = 50
-mcts_playout = 400
+mcts_playout = 50
 batch_size = -1
 checkpoints = 10
 test_cp = 10
@@ -38,7 +38,7 @@ def make_batch(
 
 
 def train(file_name=None):
-    nn = NN(file=file_name, use_gpu=True)
+    nn = NN(file=file_name)
     for i in tqdm.tqdm(range(iteration_count)):
         training_data: List[Tuple[Image, Tuple[ndarray, float]]] = []
         for _ in range(games_in_iteration):
@@ -307,11 +307,8 @@ def show_moves(nn: NN):
 
 
 def main():
-    models_tournament_round()
-    for model in glob.glob('../models/*'):
-        print(f'{model}:')
-        show_moves(NN(file=model))
-    # models_tournament_round()
+    profile()
+    train()
 
 if __name__ == "__main__":
     main()

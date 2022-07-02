@@ -1,7 +1,6 @@
 from Game import NUM_ACTIONS, Game, Position, position_from_image
-from NN import NN, NNModel
+from NN import NN, PolicyNN, ValueNN
 from MCTS import Node, MCST
-import torch
 import numpy as np
 from typing import Tuple
 
@@ -32,16 +31,16 @@ def test_game():
 
 
 def test_nnmodel():
-    model = NNModel('cpu')
     pos = Position([1, -1, -1, 1, 0, 0, 1, 0, 0])
-    pos_tensor = torch.from_numpy(pos.vectorize()).float()
-    model.forward(pos_tensor)
+    state = pos.vectorize()[..., np.newaxis]
+    ValueNN()(state)
+    PolicyNN()(state)
 
 
 def test_nn():
     nn = NN()
     pos = Position([1, -1, -1, 1, 0, 0, 1, 0, 0])
-    pos_tensor = torch.from_numpy(pos.vectorize()).float()
+    state = pos.vectorize()
     nn.policy_function(pos)
     batch = [
         (
@@ -82,3 +81,6 @@ def test_tree():
     game = Game()
     tree = MCST(game, nn.policy_function, 10)
     tree.run(game, nn.policy_function)
+
+if __name__ == '__main__':
+    test_nn()
