@@ -25,7 +25,9 @@ class Node:
         self.results = np.array([0.0, 0.0, 0.0])
 
     def avg(self):
-        return self.results.dot(probs_to_eval)
+        if abs(self.results.sum()) < 1e-6:
+            return 0
+        return (self.results / self.results.sum()).dot(probs_to_eval)
 
     def select(self) -> Tuple[int, any]:
         """Selects the node with the best UCB score, and returns action leading to that node and the Node itself"""

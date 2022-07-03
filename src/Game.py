@@ -44,7 +44,7 @@ class Position:
             a, b, c = slice
             if self.board[a] == self.board[b] == self.board[c] != 0:
                 res = self.board[a]
-                return res
+        return res
 
     def vectorize(self) -> np.ndarray:
         """Returns normalized vector that represents the position for NN training.
