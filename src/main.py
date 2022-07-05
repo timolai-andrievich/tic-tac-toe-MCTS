@@ -22,8 +22,8 @@ min_exploration_noise = 0.15
 
 def validate_parameters():
     assert 1 > exploration_decay >= 0
-    assert 1 > starting_exploration_noise >= 0
-    assert 1 > min_exploration_noise >= 0
+    assert 1 >= starting_exploration_noise >= 0
+    assert 1 >= min_exploration_noise >= 0
     assert mcts_playout > 1  # Otherwise, the root of the tree will have no children
 
 
