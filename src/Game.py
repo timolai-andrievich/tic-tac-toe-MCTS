@@ -70,25 +70,6 @@ class Position:
                 result += [i]
         return result
 
-    def with_move(self, action: int):
-        nb = self.board.copy()
-        nb[action] = self.get_current_move()
-        return Position(nb)
-
-    def visualize(self) -> str:
-        b = []
-        res = ''
-        for i in self.board:
-            if i == 1:
-                b += ['X']
-            if i == -1:
-                b += ['O']
-            if i == 0:
-                b += ['.']
-        for i in range(0, 9, 3):
-            res += ''.join(b[i:i+3]) + '\n'
-        return res
-
 
 def position_from_image(pos: Image) -> Position:
     """Returns the position from the image of the position"""
@@ -105,7 +86,6 @@ class Game:
         self._num_actions: int = NUM_ACTIONS  # Number of actions possible in the game
         self._position: Position = position  # Current in-game position
         self._positions: List[Position] = []  # List of all the positions reached
-        self._scores: Dict[Image, float]  # Evaluation scores of the positions
 
     def is_terminal(self) -> bool:
         """Returns true if the position of the game is terminal"""
@@ -145,13 +125,3 @@ class Game:
             raise IndexError(f"The {action}-th cell is already taken")
         self._position.board[action] = self.get_current_move()
         self._positions.append(self._position.copy())
-
-    def assign_scores(self):
-        """Assigns the evaluation scores to the positions based on the winner of the game"""
-        if not self.is_terminal():
-            raise ValueError("The game is not finished yet")
-        self._scores = [self.get_winner()] * self._positions.__len__()
-
-    def get_scores(self) -> List[float]:
-        """Returns the final evaluation scores for the positions in the game"""
-        return self._scores

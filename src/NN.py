@@ -1,4 +1,3 @@
-from warnings import WarningMessage
 import numpy as np
 from numpy import ndarray
 from Game import (
@@ -10,7 +9,7 @@ from Game import (
     NUM_LAYERS,
     position_from_image,
 )
-from typing import Tuple, Dict, List
+from typing import Tuple, List
 import time
 import tensorflow as tf
 import tensorflow
@@ -22,16 +21,21 @@ from tensorflow.keras.optimizers import Adam
 
 FILTERS = NUM_LAYERS * 32
 
+
 class PolicyNN(Model):
     """Provides the interface for an neural network model"""
 
     def __init__(self):
         super(PolicyNN, self).__init__()
 
-        self.conv0 = Conv2D(16, kernel_size=(3, 3), padding='same', activation='relu')
-        self.conv1 = Conv2D(1, kernel_size=(3, 3), padding='same', activation='relu')
+        self.conv0 = Conv2D(16, kernel_size=(3, 3), padding="same", activation="relu")
+        self.conv1 = Conv2D(1, kernel_size=(3, 3), padding="same", activation="relu")
         self.flatten = Flatten(input_shape=(None, BOARD_HEIGHT, BOARD_WIDTH, 1))
-        self.lin1 = Dense(NUM_ACTIONS, input_shape=(None, BOARD_HEIGHT * BOARD_WIDTH * 1), activation='softmax')
+        self.lin1 = Dense(
+            NUM_ACTIONS,
+            input_shape=(None, BOARD_HEIGHT * BOARD_WIDTH * 1),
+            activation="softmax",
+        )
 
     def call(self, input):
         input = self.conv0(input)
@@ -39,6 +43,7 @@ class PolicyNN(Model):
         input = self.flatten(input)
         input = self.lin1(input)
         return input
+
 
 class ValueNN(Model):
     """Provides the interface for an neural network model"""
@@ -46,12 +51,22 @@ class ValueNN(Model):
     def __init__(self):
         super(ValueNN, self).__init__()
 
-        self.conv0 = Conv2D(16, kernel_size=(3, 3), padding='same',
-            input_shape=(None, BOARD_HEIGHT, BOARD_WIDTH, NUM_LAYERS), activation='relu')
-        self.conv1 = Conv2D(1, kernel_size=(3, 3), padding='same',
-            input_shape=(None, BOARD_HEIGHT, BOARD_WIDTH, 16), activation='relu')
+        self.conv0 = Conv2D(
+            16,
+            kernel_size=(3, 3),
+            padding="same",
+            input_shape=(None, BOARD_HEIGHT, BOARD_WIDTH, NUM_LAYERS),
+            activation="relu",
+        )
+        self.conv1 = Conv2D(
+            1,
+            kernel_size=(3, 3),
+            padding="same",
+            input_shape=(None, BOARD_HEIGHT, BOARD_WIDTH, 16),
+            activation="relu",
+        )
         self.flatten = Flatten()
-        self.lin1 = Dense(3, activation='softmax')
+        self.lin1 = Dense(3, activation="softmax")
 
     def call(self, input):
         input = self.conv0(input)
@@ -59,6 +74,7 @@ class ValueNN(Model):
         input = self.flatten(input)
         input = self.lin1(input)
         return input
+
 
 class NN:
     """A wrapper for the network"""
@@ -75,7 +91,6 @@ class NN:
             self.valueNN = tf.keras.models.load_model(value_file)
         else:
             self.valueNN = ValueNN()
-
 
     def policy_function(self, position: Position) -> Tuple[ndarray, ndarray]:
         """Evaluates the position and returns probabilities of actions and evaluation score"""
@@ -106,6 +121,9 @@ class NN:
             val_loss = self.loss(y_val, pred_val)
         act_gradients = act_tape.gradient(act_loss, self.policyNN.trainable_variables)
         val_gradients = val_tape.gradient(val_loss, self.valueNN.trainable_variables)
-        self.policyOptimizer.apply_gradients(zip(act_gradients, self.policyNN.trainable_variables))
-        self.valueOptimizer.apply_gradients(zip(val_gradients, self.valueNN.trainable_variables))
-
+        self.policyOptimizer.apply_gradients(
+            zip(act_gradients, self.policyNN.trainable_variables)
+        )
+        self.valueOptimizer.apply_gradients(
+            zip(val_gradients, self.valueNN.trainable_variables)
+        )

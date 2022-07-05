@@ -23,11 +23,9 @@ def test_game():
     g.commit_action(3)
     g.commit_action(2)
     g.commit_action(6)
-    g.assign_scores()
     assert g.get_current_move() == -1
     assert g.get_actions() == [4, 5, 7, 8]
     assert g.is_terminal() == True
-    assert g.get_scores() == [1, 1, 1, 1, 1]
 
 
 def test_nnmodel():
@@ -43,20 +41,8 @@ def test_nn():
     state = pos.vectorize()
     nn.policy_function(pos)
     batch = [
-        (
-            pos.to_image(),
-            (
-                np.zeros(NUM_ACTIONS),
-                0,
-            ),
-        ),
-        (
-            pos.to_image(),
-            (
-                np.zeros(NUM_ACTIONS),
-                0,
-            ),
-        ),
+        (pos.to_image(), (np.zeros(NUM_ACTIONS), 0,),),
+        (pos.to_image(), (np.zeros(NUM_ACTIONS), 0,),),
     ]
     nn.train(batch)
 
@@ -79,8 +65,9 @@ def test_node():
 def test_tree():
     nn = NN()
     game = Game()
-    tree = MCST(game, nn.policy_function, 10)
-    tree.run(game, nn.policy_function)
+    tree = MCST()
+    tree.run(game, nn.policy_function, 100)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     test_nn()
