@@ -1,129 +1,85 @@
 import numpy as np
 from numpy import ndarray
 from Game import (
+    Game,
     Position,
     Image,
-    BOARD_WIDTH,
-    BOARD_HEIGHT,
-    NUM_ACTIONS,
-    NUM_LAYERS,
     position_from_image,
 )
 from typing import Tuple, List
 import time
 import tensorflow as tf
-import tensorflow
-from tensorflow.python.keras.layers import Dense, Conv2D, Flatten, Softmax
+from tensorflow.python.keras.layers import Dense, Conv2D, Flatten, Softmax, Input, ReLU
 from tensorflow.python.keras import Model
 from tensorflow.python.keras.losses import CategoricalCrossentropy
 from tensorflow.keras.optimizers import Adam
 
-
-FILTERS = NUM_LAYERS * 32
-
-
-class PolicyNN(Model):
-    """Provides the interface for an neural network model"""
-
-    def __init__(self):
-        super(PolicyNN, self).__init__()
-
-        self.conv0 = Conv2D(16, kernel_size=(3, 3), padding="same", activation="relu")
-        self.conv1 = Conv2D(1, kernel_size=(3, 3), padding="same", activation="relu")
-        self.flatten = Flatten(input_shape=(None, BOARD_HEIGHT, BOARD_WIDTH, 1))
-        self.lin1 = Dense(
-            NUM_ACTIONS,
-            input_shape=(None, BOARD_HEIGHT * BOARD_WIDTH * 1),
-            activation="softmax",
-        )
-
-    def call(self, input):
-        input = self.conv0(input)
-        input = self.conv1(input)
-        input = self.flatten(input)
-        input = self.lin1(input)
-        return input
+BATCH_SIZE = 32
 
 
-class ValueNN(Model):
-    """Provides the interface for an neural network model"""
+def create_model(filters=128):
+    input = Input(shape=(Game.board_height, Game.board_width, Game.num_layers))
+    conv1 = ReLU()(Conv2D(filters, (3, 3), padding='same')(input))
+    conv2 = ReLU()(Conv2D(filters, (3, 3), padding='same')(conv1))
+    conv3 = ReLU()(Conv2D(filters, (3, 3), padding='same')(conv2))
+    flat = Flatten()(conv3)
 
-    def __init__(self):
-        super(ValueNN, self).__init__()
+    pol1 = ReLU()(Dense(128)(flat))
+    pol = Softmax()(Dense(Game.num_actions)(pol1))
 
-        self.conv0 = Conv2D(
-            16,
-            kernel_size=(3, 3),
-            padding="same",
-            input_shape=(None, BOARD_HEIGHT, BOARD_WIDTH, NUM_LAYERS),
-            activation="relu",
-        )
-        self.conv1 = Conv2D(
-            1,
-            kernel_size=(3, 3),
-            padding="same",
-            input_shape=(None, BOARD_HEIGHT, BOARD_WIDTH, 16),
-            activation="relu",
-        )
-        self.flatten = Flatten()
-        self.lin1 = Dense(3, activation="softmax")
+    val1 = ReLU()(Dense(128)(flat))
+    val = Softmax()(Dense(3)(val1))
 
-    def call(self, input):
-        input = self.conv0(input)
-        input = self.conv1(input)
-        input = self.flatten(input)
-        input = self.lin1(input)
-        return input
+    model = Model(inputs=input, outputs=[pol, val])
+    model.compile()
+    return model
 
 
 class NN:
     """A wrapper for the network"""
 
-    def __init__(self, policy_file=None, value_file=None):
+    def __init__(self, file_path=None):
         self.loss = CategoricalCrossentropy()
-        self.valueOptimizer = Adam()
-        self.policyOptimizer = Adam()
-        if policy_file:
-            self.policyNN = tf.keras.models.load_model(policy_file)
+        self.optimizer = Adam(learning_rate=2e-2)
+        if file_path is None:
+            self.model = create_model()
         else:
-            self.policyNN = PolicyNN()
-        if value_file:
-            self.valueNN = tf.keras.models.load_model(value_file)
-        else:
-            self.valueNN = ValueNN()
+            self.model = tf.keras.models.load_model(file_path)
 
     def policy_function(self, position: Position) -> Tuple[ndarray, ndarray]:
         """Evaluates the position and returns probabilities of actions and evaluation score"""
         state = position.vectorize()[np.newaxis, ...]
-        act = self.policyNN(state)
-        val = self.valueNN(state)
+        act, val = self.model(state)
         return act.numpy()[0], val.numpy()[0]
 
     def dump(self, file_name: str = None, info: str = ""):
         if file_name is None:
-            file_name = f"../models/model-{time.strftime('%Y%m%d_%H%M%S')}{'_' if info else ''}{info}"
-        self.valueNN.save(f"{file_name}_value.tf")
-        self.policyNN.save(f"{file_name}_policy.tf")
+            file_name = f"../models/model-{time.strftime('%Y%m%d_%H%M%S')}{f'_{info}' if info else ''}"
+        self.model.save(file_name)
 
-    def train(self, batch: List[Tuple[Image, Tuple[ndarray, float]]]):
+    @tf.function(reduce_retracing=True)
+    def train_step(self, x, y_act, y_val):
+        with tf.GradientTape() as tape:
+            pred_act, pred_val = self.model(x)
+            act_loss = self.loss(y_act, pred_act)
+            val_loss = self.loss(y_val, pred_val)
+            loss = act_loss + val_loss
+        gradients = tape.gradient(loss, self.model.trainable_variables)
+        self.optimizer.apply_gradients(
+            zip(gradients, self.model.trainable_variables)
+        )
+
+
+    def train(self, batch: List[Tuple[Image, Tuple[ndarray, ndarray]]]):
         """Trains the NN on a batch of data collected from self-play"""
-        x = np.zeros((len(batch), BOARD_HEIGHT, BOARD_WIDTH, NUM_LAYERS))
-        y_act = np.zeros((len(batch), NUM_ACTIONS))
+        x = np.zeros((len(batch), Game.board_height, Game.board_width, Game.num_layers))
+        y_act = np.zeros((len(batch), Game.num_actions))
         y_val = np.zeros((len(batch), 3))
         for i in range(len(batch)):
             img, (act, val) = batch[i]
             x[i] = position_from_image(img).vectorize()
             y_act[i] = act
             y_val[i] = val
-        with tf.GradientTape() as act_tape, tf.GradientTape() as val_tape:
-            pred_act, pred_val = self.policyNN(x), self.valueNN(x)
-            act_loss = self.loss(y_act, pred_act)
-            val_loss = self.loss(y_val, pred_val)
-        act_gradients = act_tape.gradient(act_loss, self.policyNN.trainable_variables)
-        val_gradients = val_tape.gradient(val_loss, self.valueNN.trainable_variables)
-        self.policyOptimizer.apply_gradients(
-            zip(act_gradients, self.policyNN.trainable_variables)
-        )
-        self.valueOptimizer.apply_gradients(
-            zip(val_gradients, self.valueNN.trainable_variables)
-        )
+        dataset = tf.data.Dataset.from_tensor_slices((x, y_act, y_val)).shuffle(10000).batch(BATCH_SIZE)
+        for x, y_act, y_val in dataset:
+            self.train_step(x, y_act, y_val)

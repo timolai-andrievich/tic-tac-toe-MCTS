@@ -1,19 +1,22 @@
 import glob
 import itertools
+import time
+from unittest import result
 import numpy as np
 from torch import rand
-from Game import NUM_ACTIONS, Game, Image
+from Game import BOARD_HEIGHT, Game, Image
 from NN import NN
 from MCTS import MCST
 from typing import Dict, List, Tuple
 from numpy import ndarray
 import tqdm
 import random
+from colorama import Fore
 
 
-action_choices = {'best', 'random', 'probabilities', 'random_sharp'}
+action_choices = {"best", "random", "probabilities", "random_sharp"}
 mcts_playout = 100
-test_games = 300
+test_games = 20
 
 
 class TrueRandom(NN):
@@ -24,14 +27,36 @@ class TrueRandom(NN):
         pass
 
     def policy_function(*args, **kwargs):
-        return np.random.dirichlet(np.ones(NUM_ACTIONS)), np.random.dirichlet(np.ones(3))
-    
+        return (
+            np.random.dirichlet(np.ones(Game.num_actions)),
+            np.random.dirichlet(np.ones(3)),
+        )
+
     def dump(*args, **kwargs):
         pass
 
-def models_play(nn1: NN, nn2: NN, first_starts: bool, action_choice='best'):
+
+class EqualProbs(NN):
+    def __init__(*args, **kwargs):
+        pass
+
+    def train(*args, **kwargs):
+        pass
+
+    def policy_function(*args, **kwargs):
+        return (
+            np.ones(Game.num_actions) / Game.num_actions,
+            np.ones(3) / 3,
+        )
+
+    def dump(*args, **kwargs):
+        pass
+
+
+
+def models_play(nn1: NN, nn2: NN, first_starts: bool, action_choice="best"):
     """Returns 1 if the first nn wins, 0 if the game is tied, -1 if thesecond nn wins"""
-    assert(action_choice in action_choices)
+    assert action_choice in action_choices
     game = Game().copy()
     tree1 = MCST()
     tree2 = MCST()
@@ -45,20 +70,20 @@ def models_play(nn1: NN, nn2: NN, first_starts: bool, action_choice='best'):
     while not game.is_terminal():
         probs, _ = trees[i & 1].run(game.copy(), policies[i & 1], mcts_playout)
         legal_actions = game.get_actions()
-        for a in range(NUM_ACTIONS):
+        for a in range(Game.num_actions):
             if not a in legal_actions:
                 probs[a] = 0
         probs = probs / probs.sum()
-        if action_choice == 'best':
+        if action_choice == "best":
             action = np.argmax(probs)
-        elif action_choice == 'probabilities':
-            action = np.random.choice(NUM_ACTIONS, p=probs)
-        elif action_choice == 'random':
+        elif action_choice == "probabilities":
+            action = np.random.choice(Game.num_actions, p=probs)
+        elif action_choice == "random":
             action = random.choice(legal_actions)
-        elif action_choice == 'random_sharp':
+        elif action_choice == "random_sharp":
             p = probs - np.min(probs)
             p /= p.sum()
-            action = np.random.choice(NUM_ACTIONS, p=p)
+            action = np.random.choice(Game.num_actions, p=p)
         trees[0].commit_action(action)
         trees[1].commit_action(action)
         game.commit_action(action)
@@ -71,8 +96,8 @@ def models_play(nn1: NN, nn2: NN, first_starts: bool, action_choice='best'):
     return res
 
 
-def models_match(nn1: NN, nn2: NN, games: int = test_games, action_choice='best'):
-    assert(action_choice in action_choices)
+def models_match(nn1: NN, nn2: NN, games: int = test_games, action_choice="best"):
+    assert action_choice in action_choices
     res = [0, 0, 0]
     for i in tqdm.tqdm(range(games)):
         winner = models_play(nn1, nn2, i % 2 == 0, action_choice=action_choice)
@@ -80,18 +105,18 @@ def models_match(nn1: NN, nn2: NN, games: int = test_games, action_choice='best'
     return res
 
 
-def models_tournament_round(silent=False, action_choice='best'):
-    assert(action_choice in action_choices)
+def models_tournament_round(silent=False, action_choice="best"):
+    assert action_choice in action_choices
     # TODO add tournament table visualization
-    files = zip(glob.glob("../models/*policy*"), glob.glob("../models/*value*"))
+    files = glob.glob("../models/*")
     models_list: List[str] = []
     models_results: Dict[str, List[int, int, int]] = {}
     models: Dict[str, NN] = {}
-    for policy, value in files:
-        nn = NN(value_file=value, policy_file=policy)
-        models_list.append(policy)
-        models[policy] = nn
-        models_results[policy] = [0, 0, 0]
+    for file_path in files:
+        nn = NN(file_path=file_path)
+        models_list.append(file_path)
+        models[file_path] = nn
+        models_results[file_path] = [0, 0, 0]
     models_list.append("random_nn")
     models["random_nn"] = NN()
     models_results["random_nn"] = [0, 0, 0]
@@ -121,12 +146,53 @@ def models_tournament_round(silent=False, action_choice='best'):
     return sorted_models
 
 
-def profile():
-    import pstats
-    import cProfile
-
-    with cProfile.Profile() as p:
-        train()
-    stats = pstats.Stats(p)
-    stats.sort_stats(pstats.SortKey.TIME)
-    stats.print_stats()
+def play_and_visualize(nn1: NN, nn2: NN, action_choice='best'):
+    assert action_choice in action_choices
+    game = Game().copy()
+    tree1 = MCST()
+    tree2 = MCST()
+    trees = [tree1, tree2]
+    policies = [nn1.policy_function, nn2.policy_function]
+    i: int = 0
+    t1 = time.time()
+    print(game.position.visualize(), '\n')
+    try:
+        while not game.is_terminal():
+            probs, results = trees[i & 1].run(game.copy(), policies[i & 1], mcts_playout)
+            legal_actions = game.get_actions()
+            for a in range(Game.num_actions):
+                if not a in legal_actions:
+                    probs[a] = 0
+            probs = probs / probs.sum()
+            if action_choice == "best":
+                action = np.argmax(probs)
+            elif action_choice == "probabilities":
+                action = np.random.choice(Game.num_actions, p=probs)
+            elif action_choice == "random":
+                action = random.choice(legal_actions)
+            elif action_choice == "random_sharp":
+                p = probs - np.min(probs)
+                p /= p.sum()
+                action = np.random.choice(Game.num_actions, p=p)
+            trees[0].commit_action(action)
+            trees[1].commit_action(action)
+            game.commit_action(action)
+            print(f"Making move {action} with probability {probs[action] * 100:.2f}%"
+                f" outcome probabilities: X - {results[1]:.2f}, tie - {results[0]:.2f}, O - {results[2]:.2f}")
+            pos = list(game.position.visualize())
+            c = pos[action // Game.board_height * (Game.board_height + 1) + action % Game.board_height]
+            c = Fore.RED + c + Fore.RESET
+            pos[action // Game.board_height * (Game.board_height + 1) + action % Game.board_height] = c
+            print(''.join(pos))
+            i += 1
+        t2 = time.time()
+        winner = game.get_winner()
+        if winner == 0:
+            print('The game is a tie')
+        elif winner == 1:
+            print('X won')
+        else:
+            print('O won')
+        print(f'{i} moves played in {t2 - t1:.2f}s, {(t2 - t1) / i:.2f}s/move')
+    except KeyboardInterrupt:
+        pass

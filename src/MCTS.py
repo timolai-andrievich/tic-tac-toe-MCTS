@@ -30,8 +30,8 @@ class Node:
         return max(self._children.items(), key=lambda x: x[1].value())
 
     def expand(self, game: Game, action_probs: ndarray) -> None:
-        legal_actions = set(game.get_actions())
-        action_probs = action_probs.reshape(9)
+        legal_actions = game.get_actions()
+        action_probs = action_probs.reshape(Game.num_actions)
         for i in legal_actions:
             self._children[i] = Node(self, action_probs[i], self.current_move * -1)
 
@@ -76,7 +76,7 @@ class MCST:
         visits = np.array(
             [
                 self._root._children[i]._visits if i in self._root._children else 0
-                for i in range(9)
+                for i in range(Game.num_actions)
             ]
         )
         probs = visits / max(1, np.sum(visits))
@@ -91,7 +91,7 @@ class MCST:
             actions.append(action)
             game.commit_action(action)
         if not game.is_terminal():
-            probs, new_value = policy_function(game._position)
+            probs, new_value = policy_function(game.position)
             node.expand(game, probs)
         else:
             winner = game.get_winner()

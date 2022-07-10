@@ -2,23 +2,23 @@ import glob
 import itertools
 import numpy as np
 from torch import rand
-from Game import NUM_ACTIONS, Game, Image
+from Game import Game, Image
 from NN import NN
 from MCTS import MCST
-from typing import Dict, List, Tuple
+from typing import List, Tuple
 from numpy import ndarray
 import tqdm
 import random
-from utils import models_tournament_round
+from utils import models_tournament_round, play_and_visualize, EqualProbs
 
-iteration_count = 1
-games_in_iteration = 1
-mcts_playout = 100
+iteration_count = 100
+games_in_iteration = 50
+mcts_playout = 400
 batch_size = -1
 checkpoints = 10
 test_games = 50
 starting_exploration_noise = 1
-exploration_decay = 0.95
+exploration_decay = 0.90
 min_exploration_noise = 0.15
 
 
@@ -44,12 +44,12 @@ def make_batch(
     return batch
 
 
-def train(policy_file=None, value_file=None):
-    nn = NN(policy_file=policy_file, value_file=value_file)
+def train(file_path=None):
+    nn = NN(file_path=file_path)
     exploration_noise = starting_exploration_noise
     for i in tqdm.tqdm(range(iteration_count)):
         training_data: List[Tuple[Image, Tuple[ndarray, float]]] = []
-        for _ in range(games_in_iteration):
+        for _ in tqdm.tqdm(range(games_in_iteration)):
             game = Game().copy()
             debug_x = game.is_terminal()
             if debug_x:
@@ -59,14 +59,14 @@ def train(policy_file=None, value_file=None):
                 probs, eval = tree.run(game.copy(), nn.policy_function, mcts_playout)
                 probs = probs * (
                     1 - exploration_noise
-                ) + exploration_noise * np.random.dirichlet(np.ones(NUM_ACTIONS))
+                ) + exploration_noise * np.random.dirichlet(np.ones(Game.num_actions))
                 legal_actions = game.get_actions()
-                for a in range(NUM_ACTIONS):
+                for a in range(Game.num_actions):
                     if not a in legal_actions:
                         probs[a] = 0
                 probs = probs / probs.sum()
-                action = np.random.choice(NUM_ACTIONS, p=probs)
-                training_data.append((game._position.to_image(), (probs, eval)))
+                action = np.random.choice(Game.num_actions, p=probs)
+                training_data.append((game.position.to_image(), (probs, eval)))
                 game.commit_action(action)
                 tree.commit_action(action)
         batch = make_batch(training_data)
@@ -81,7 +81,14 @@ def train(policy_file=None, value_file=None):
 
 
 def main():
-    models_tournament_round(action_choice='random_sharp')
+    from utils import models_tournament_round, play_and_visualize
+    # nn = train()
+    nn = NN(file_path='../models/model-20220710_141546_iteration_20')
+    play_and_visualize(nn, nn)
+    # models_tournament_round(action_choice='random_sharp')
+    # nn = NN(file_path='../models/model-20220709_163426')
+
 
 if __name__ == "__main__":
+    validate_parameters()
     main()

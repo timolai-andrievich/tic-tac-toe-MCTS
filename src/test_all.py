@@ -1,56 +1,40 @@
-from Game import NUM_ACTIONS, Game, Position, position_from_image
-from NN import NN, PolicyNN, ValueNN
+from Game import Game, START_POSITION, test_game, test_position
+from NN import NN, create_model
 from MCTS import Node, MCST
 import numpy as np
 from typing import Tuple
 
-
-def test_position():
-    pos = Position([1, -1, -1, 1, 0, 0, 1, 0, 0])
-    assert pos.get_winner() == 1
-    assert pos.get_current_move() == -1
-    assert pos.to_image() == "200211211"
-    assert position_from_image(pos.to_image()).board == pos.board
-    pos = Position([-1, -1, -1, 1, 0, 0, 1, 1, 0])
-    assert pos.get_winner() == -1
-    assert pos.get_current_move() == 1
-
-
-def test_game():
-    g = Game()
-    g.commit_action(0)
-    g.commit_action(1)
-    g.commit_action(3)
-    g.commit_action(2)
-    g.commit_action(6)
-    assert g.get_current_move() == -1
-    assert g.get_actions() == [4, 5, 7, 8]
-    assert g.is_terminal() == True
-
-
 def test_nnmodel():
-    pos = Position([1, -1, -1, 1, 0, 0, 1, 0, 0])
-    state = pos.vectorize()[..., np.newaxis]
-    ValueNN()(state)
-    PolicyNN()(state)
+    pos = START_POSITION.copy()
+    state = pos.vectorize()[np.newaxis, ...]
+    model = create_model()
+    act, val = model(state)
+    assert act.shape == (1, Game.num_actions)
+    assert val.shape == (1, 3)
 
 
 def test_nn():
     nn = NN()
-    pos = Position([1, -1, -1, 1, 0, 0, 1, 0, 0])
+    pos = START_POSITION.copy()
     state = pos.vectorize()
     nn.policy_function(pos)
     batch = [
-        (pos.to_image(), (np.zeros(NUM_ACTIONS), 0,),),
-        (pos.to_image(), (np.zeros(NUM_ACTIONS), 0,),),
+        (pos.to_image(), (np.zeros(Game.num_actions), np.array([0, 1, 0]),),),
+        (pos.to_image(), (np.zeros(Game.num_actions), np.array([0, 1, 0]),),),
     ]
     nn.train(batch)
+    act, val = nn.policy_function(pos)
+    nn.dump(file_name='../models/test')
+    nn = NN(file_path='../models/test')
+    nact, nval = nn.policy_function(pos)
+    assert (act - nact).sum() < 1e-3
+    assert (val - nval).sum() < 1e-3
 
 
 def test_node():
     root = Node(None, 0, 1)
     game = Game()
-    probs = np.array([1] * NUM_ACTIONS) / NUM_ACTIONS
+    probs = np.ones(Game.num_actions) / Game.num_actions
     assert root.is_leaf()
     assert root.is_root()
     root.expand(game, probs)
@@ -67,7 +51,6 @@ def test_tree():
     game = Game()
     tree = MCST()
     tree.run(game, nn.policy_function, 100)
-
 
 if __name__ == "__main__":
     test_nn()
