@@ -1,9 +1,5 @@
-from hashlib import new
 from numpy import ndarray
-from torch import le
-import torch
-import torch.nn.functional as F
-from Game import Game, Position, NUM_ACTIONS, START_POSITION
+from Game import Game
 from typing import Tuple, Dict, List
 import numpy as np
 import math
@@ -25,16 +21,17 @@ class Node:
         self.results = np.array([0.0, 0.0, 0.0])
 
     def avg(self):
-        return self.results.dot(probs_to_eval)
+        if abs(self.results.sum()) < 1e-6:
+            return 0
+        return (self.results / self.results.sum()).dot(probs_to_eval)
 
     def select(self) -> Tuple[int, any]:
         """Selects the node with the best UCB score, and returns action leading to that node and the Node itself"""
         return max(self._children.items(), key=lambda x: x[1].value())
 
     def expand(self, game: Game, action_probs: ndarray) -> None:
-        """Expands the node"""
-        legal_actions = set(game.get_actions())
-        action_probs = action_probs.reshape(9)
+        legal_actions = game.get_actions()
+        action_probs = action_probs.reshape(Game.num_actions)
         for i in legal_actions:
             self._children[i] = Node(self, action_probs[i], self.current_move * -1)
 
@@ -48,16 +45,15 @@ class Node:
 
     def value(self) -> float:
         """Returns the UCB score of the node"""
-        return self.cval()
+        return self.avg() * self.current_move * -1 + c_impact * self._prior * math.sqrt(
+            self._parent._visits
+        ) / (1 + self._visits)
 
     def update(self, new_score):
         """Update the score of the node"""
         self._visits += 1
         self.results += new_score
 
-    def cval(self):
-        return self.avg() * self.current_move * -1 + c_impact * self._prior * math.sqrt(self._parent._visits) / (1 + self._visits)
-    
     def update_recursive(self, new_score):
         """Update the value of the node, and the value of its parents"""
         self.update(new_score)
@@ -68,19 +64,23 @@ class Node:
 class MCST:
     """Represents the search tree"""
 
-    def __init__(self, game: Game, policy_function, num_simulations):
-        self.num_simulations = num_simulations
-        self._game: Game = game
-        self._policy = policy_function
+    def __init__(self):
         self._root = Node(None, 0, 1)
 
-    def run(self, game: Game, policy_function) -> Tuple[ndarray, ndarray]:
+    def run(
+        self, game: Game, policy_function, num_simulations
+    ) -> Tuple[ndarray, ndarray]:
         """Returns the list of probabilities of actions"""
-        for _ in range(self.num_simulations):
+        for _ in range(num_simulations):
             self.simulate(game.copy(), policy_function)
-        visits = np.array([self._root._children[i]._visits if i in self._root._children else 0 for i in range(9)])
-        probs = visits / np.sum(visits)
-        return probs, self._root.results/self._root.results.sum()
+        visits = np.array(
+            [
+                self._root._children[i]._visits if i in self._root._children else 0
+                for i in range(Game.num_actions)
+            ]
+        )
+        probs = visits / max(1, np.sum(visits))
+        return probs, self._root.results / self._root.results.sum()
 
     def simulate(self, game: Game, policy_function):
         """Simulates the game and updates the nodes of the tree"""
@@ -91,7 +91,7 @@ class MCST:
             actions.append(action)
             game.commit_action(action)
         if not game.is_terminal():
-            probs, new_value = policy_function(game._position)
+            probs, new_value = policy_function(game.position)
             node.expand(game, probs)
         else:
             winner = game.get_winner()
@@ -101,7 +101,7 @@ class MCST:
 
     def commit_action(self, action: int):
         """Makes the subtree of the root corresponding to the action the new root, and discards all the other nodes"""
-        if self._root.is_leaf():
+        if action not in self._root._children:
             self._root = Node(None, 0, self._root.current_move * -1)
         else:
             self._root = self._root._children[action]
