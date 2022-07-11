@@ -1,101 +1,85 @@
-from io import BytesIO, TextIOWrapper
-
 import numpy as np
 from numpy import ndarray
 from Game import (
+    Game,
     Position,
     Image,
-    BOARD_WIDTH,
-    BOARD_HEIGHT,
-    NUM_ACTIONS,
-    NUM_LAYERS,
     position_from_image,
 )
-from typing import Tuple, Dict, List
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+from typing import Tuple, List
 import time
-import torch.optim
+import tensorflow as tf
+from tensorflow.python.keras.layers import Dense, Conv2D, Flatten, Softmax, Input, ReLU
+from tensorflow.python.keras import Model
+from tensorflow.python.keras.losses import CategoricalCrossentropy
+from tensorflow.keras.optimizers import Adam
+
+BATCH_SIZE = 32
 
 
-FILTERS = NUM_LAYERS * 32
-BLOCKS = 3
+def create_model(filters=128):
+    input = Input(shape=(Game.board_height, Game.board_width, Game.num_layers))
+    conv1 = ReLU()(Conv2D(filters, (3, 3), padding='same')(input))
+    conv2 = ReLU()(Conv2D(filters, (3, 3), padding='same')(conv1))
+    conv3 = ReLU()(Conv2D(filters, (3, 3), padding='same')(conv2))
+    flat = Flatten()(conv3)
 
-class NNModel(nn.Module):
-    """Provides the interface for an neural network model"""
+    pol1 = ReLU()(Dense(128)(flat))
+    pol = Softmax()(Dense(Game.num_actions)(pol1))
 
-    def __init__(self, device):
-        super(NNModel, self).__init__()
+    val1 = ReLU()(Dense(128)(flat))
+    val = Softmax()(Dense(3)(val1))
 
-        self.conv0 = nn.Conv2d(NUM_LAYERS, FILTERS, kernel_size=(3, 3), padding=(1, 1))
-        self.conv1 = nn.Conv2d(FILTERS, FILTERS, kernel_size=(3, 3), padding=(1, 1))
-        self.conv2 = nn.Conv2d(FILTERS, FILTERS, kernel_size=(3, 3), padding=(1, 1))
-        self.conv3 = nn.Conv2d(FILTERS, FILTERS, kernel_size=(3, 3), padding=(1, 1))
-
-        self.val_conv1 = nn.Conv2d(FILTERS, NUM_LAYERS, kernel_size=(3, 3), padding=(1, 1))
-        self.val_lin1 = nn.Linear(NUM_LAYERS * BOARD_HEIGHT * BOARD_WIDTH, 3)
-
-        self.act_conv1 = nn.Conv2d(FILTERS, NUM_LAYERS, kernel_size=(3, 3), padding=(1, 1))
-        self.act_lin1 = nn.Linear(NUM_LAYERS * BOARD_HEIGHT * BOARD_WIDTH, NUM_ACTIONS)
-
-    def forward(self, input):
-        x = F.relu(self.conv0(input))
-        x = F.relu(self.conv1(x))
-        x = F.relu(self.conv2(x))
-        x = F.relu(self.conv3(x))
-
-        x_val = F.relu(self.val_conv1(x))
-        x_val = x_val.view(-1, NUM_LAYERS * BOARD_HEIGHT * BOARD_WIDTH)
-        x_val = F.softmax(self.val_lin1(x_val), dim=1)
-
-        x_act = F.relu(self.act_conv1(x))
-        x_act = x_act.view(-1, NUM_LAYERS * BOARD_HEIGHT * BOARD_WIDTH)
-        x_act = F.softmax(self.act_lin1(x_act), dim=1)
-
-        return x_act, x_val
+    model = Model(inputs=input, outputs=[pol, val])
+    model.compile()
+    return model
 
 
 class NN:
     """A wrapper for the network"""
 
-    def __init__(self, use_gpu=False, file=None):
-        self._device = "cuda" if torch.cuda.is_available() else "cpu"
-        if file:
-            self._NN = NNModel(self._device).to(self._device)
-            self._NN.load_state_dict(torch.load(file))
+    def __init__(self, file_path=None):
+        self.loss = CategoricalCrossentropy()
+        self.optimizer = Adam(learning_rate=2e-2)
+        if file_path is None:
+            self.model = create_model()
         else:
-            self._NN = NNModel(self._device).to(self._device)
-        self.optimizer = torch.optim.Adam(self._NN.parameters(), lr=2e-3, weight_decay=1e-4)
+            self.model = tf.keras.models.load_model(file_path)
 
     def policy_function(self, position: Position) -> Tuple[ndarray, ndarray]:
         """Evaluates the position and returns probabilities of actions and evaluation score"""
-        input = torch.from_numpy(position.vectorize()).float().to(self._device)
-        act, val = self._NN(input)
-        return act.cpu().detach().numpy()[0], val.cpu().detach().numpy()[0]
+        state = position.vectorize()[np.newaxis, ...]
+        act, val = self.model(state)
+        return act.numpy()[0], val.numpy()[0]
 
     def dump(self, file_name: str = None, info: str = ""):
         if file_name is None:
-            file_name = f"../models/model-{time.strftime('%Y%m%d_%H%M%S')}_{info}.pt"
-        torch.save(self._NN.state_dict(), file_name)
+            file_name = f"../models/model-{time.strftime('%Y%m%d_%H%M%S')}{f'_{info}' if info else ''}"
+        self.model.save(file_name)
 
-    def train(self, batch: List[Tuple[Image, Tuple[ndarray, float]]]):
+    @tf.function(reduce_retracing=True)
+    def train_step(self, x, y_act, y_val):
+        with tf.GradientTape() as tape:
+            pred_act, pred_val = self.model(x)
+            act_loss = self.loss(y_act, pred_act)
+            val_loss = self.loss(y_val, pred_val)
+            loss = act_loss + val_loss
+        gradients = tape.gradient(loss, self.model.trainable_variables)
+        self.optimizer.apply_gradients(
+            zip(gradients, self.model.trainable_variables)
+        )
+
+
+    def train(self, batch: List[Tuple[Image, Tuple[ndarray, ndarray]]]):
         """Trains the NN on a batch of data collected from self-play"""
-        self.optimizer.zero_grad()
-        x = np.zeros((len(batch), NUM_LAYERS, BOARD_HEIGHT, BOARD_WIDTH))
-        y_act = np.zeros((len(batch), NUM_ACTIONS))
+        x = np.zeros((len(batch), Game.board_height, Game.board_width, Game.num_layers))
+        y_act = np.zeros((len(batch), Game.num_actions))
         y_val = np.zeros((len(batch), 3))
         for i in range(len(batch)):
             img, (act, val) = batch[i]
             x[i] = position_from_image(img).vectorize()
             y_act[i] = act
             y_val[i] = val
-        x = torch.from_numpy(x).to(self._device).float()
-        y_act = torch.from_numpy(y_act).to(self._device).float()
-        y_val = torch.from_numpy(y_val).to(self._device).float()
-        pred_act, pred_val = self._NN(x)
-        val_loss = F.mse_loss(pred_val, y_val)
-        act_loss = F.mse_loss(pred_act, y_act)
-        loss = val_loss + act_loss
-        loss.backward()
-        self.optimizer.step()
+        dataset = tf.data.Dataset.from_tensor_slices((x, y_act, y_val)).shuffle(10000).batch(BATCH_SIZE)
+        for x, y_act, y_val in dataset:
+            self.train_step(x, y_act, y_val)
