@@ -9,7 +9,6 @@ from typing import List, Tuple
 from numpy import ndarray
 import tqdm
 import random
-from utils import models_tournament_round, play_and_visualize, EqualProbs
 
 iteration_count = 100
 games_in_iteration = 50
@@ -81,12 +80,8 @@ def train(file_path=None):
 
 
 def main():
-    from utils import models_tournament_round, play_and_visualize
-    # nn = train()
-    nn = NN(file_path='../models/model-20220710_141546_iteration_20')
-    play_and_visualize(nn, nn)
-    # models_tournament_round(action_choice='random_sharp')
-    # nn = NN(file_path='../models/model-20220709_163426')
+    from utils import evaluate_models_against_minmax
+    evaluate_models_against_minmax(games=500, playout=100)
 
 
 if __name__ == "__main__":
