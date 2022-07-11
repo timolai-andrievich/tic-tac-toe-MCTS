@@ -80,8 +80,8 @@ def train(file_path=None):
 
 
 def main():
-    from utils import evaluate_models_against_minmax
-    evaluate_models_against_minmax(games=500, playout=100)
+    from utils import evaluate_models_against_minmax, play_and_visualize_against_minmax
+    evaluate_models_against_minmax(games=1000, playout=50)
 
 
 if __name__ == "__main__":

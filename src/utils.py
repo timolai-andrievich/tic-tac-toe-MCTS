@@ -14,6 +14,7 @@ import tqdm
 import random
 from colorama import Fore
 from scipy.stats import beta
+from minmax import MinMax
 
 action_choices = {"best", "random", "probabilities", "random_sharp"}
 mcts_playout = 800
@@ -43,55 +44,6 @@ class TrueRandom(NN):
             np.random.dirichlet(np.ones(Game.num_actions)),
             np.random.dirichlet(np.ones(3)),
         )
-
-    def dump(*args, **kwargs):
-        pass
-
-
-class MinMax(NN):
-    def __init__(self, *args, **kwargs):
-        self.cache = {}
-
-    def train(*args, **kwargs):
-        pass
-
-    def evaluate(self, pos: Position):
-        game = Game(position=pos)
-        if game.is_terminal():
-            res = np.zeros(3)
-            res[game.get_winner()] = 1
-            self.cache[pos.to_image()] = np.ones(Game.num_actions) / Game.num_actions, res
-            return
-        current_move = game.get_current_move()
-        legal_actions = game.get_actions()
-        results = {}
-        for i in legal_actions:
-            scratch_game = game.copy()
-            scratch_game.commit_action(i)
-            results[i] = self.policy_function(scratch_game.position)
-        res_sum = np.zeros(3)
-        for _, r in results.values():
-            res_sum += r
-        actions = np.zeros(Game.num_actions)
-        max_score = None
-        if current_move == 1 and res_sum[-1] > 1e-6: max_score = -1
-        if current_move == 1 and res_sum[0] > 1e-6: max_score = 0
-        if current_move == 1 and res_sum[1] > 1e-6: max_score = 1
-        if current_move == -1 and res_sum[1] > 1e-6: max_score = 1
-        if current_move == -1 and res_sum[0] > 1e-6: max_score = 0
-        if current_move == -1 and res_sum[-1] > 1e-6: max_score = 1
-        for i, (_, v) in results.items():
-            if v[max_score] > 1e-6:
-                actions[i] = 1
-        outcomes = np.zeros(3)
-        outcomes[max_score] = 1
-        actions /= actions.sum()
-        self.cache[pos.to_image()] = (actions, outcomes)
-
-    def policy_function(self, pos: Position):
-        if pos.to_image() not in self.cache:
-            self.evaluate(pos)
-        return self.cache[pos.to_image()]
 
     def dump(*args, **kwargs):
         pass
@@ -434,3 +386,47 @@ def evaluate_models_against_minmax(games: int = test_games, playout: int = mcts_
         lb, av, ub = calculate_distribution(w + t / 2, l + t / 2)
         print(f'{name:>30}: +{w}-{l}={t}, score: {(w + t / 2) / games}, elo: {lb:.0f} - {av:.0f} - {ub:.0f}')
 
+def play_and_visualize_against_minmax(nn: NN, first_starts: bool, action_choice: str = 'best', 
+        playout: int = mcts_playout, mm: MinMax = None):
+    assert action_choice in action_choices
+    if mm is None:
+        mm = MinMax()
+    game = Game().copy()
+    tree = MCST()
+    policy = nn.policy_function
+    i: int = 0
+    while not game.is_terminal():
+        legal_actions = game.get_actions()
+        if first_starts and i % 2 == 0 or not first_starts and i % 2 == 1:
+            probs, results = tree.run(game.copy(), policy, playout)
+            if action_choice == "best":
+                action = np.argmax(probs)
+            elif action_choice == "probabilities":
+                action = np.random.choice(Game.num_actions, p=probs)
+            elif action_choice == "random":
+                action = random.choice(legal_actions)
+            elif action_choice == "random_sharp":
+                action = random_sharp(probs, legal_actions)
+            else:
+                raise ValueError(f'{action_choice} is not a valid strategy')
+        else:
+            probs, results = mm.policy_function(game.position)
+            action = np.random.choice(Game.num_actions, p=probs)
+        
+        print(f"Making move {action} with probability {probs[action] * 100:.2f}%"
+                f" outcome probabilities: X - {results[1]:.2f}, tie - {results[0]:.2f}, O - {results[2]:.2f}")
+        print(f'{(probs.reshape((Game.board_height, Game.board_width)) * 100).round(2)}')
+        tree.commit_action(action)
+        game.commit_action(action)
+        pos = list(game.position.visualize())
+        c = pos[action // Game.board_height * (Game.board_height + 1) + action % Game.board_height]
+        c = Fore.RED + c + Fore.RESET
+        pos[action // Game.board_height * (Game.board_height + 1) + action % Game.board_height] = c
+        print(''.join(pos))
+        i += 1
+    winner = game.get_winner()
+    if winner == 0:
+        res = 0
+    else:
+        res = (1 if first_starts else -1) * winner
+    return res
