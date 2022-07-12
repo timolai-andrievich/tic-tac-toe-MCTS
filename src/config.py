@@ -11,3 +11,4 @@ class Config:
     c_impact = 5
     minibatch_size = 128
     learning_rate = 1e-1
+    test_checkpoints = 1

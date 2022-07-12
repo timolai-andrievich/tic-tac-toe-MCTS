@@ -21,13 +21,16 @@ def create_model(filters=128):
     conv1 = ReLU()(Conv2D(filters, (3, 3), padding="same")(state_input))
     conv2 = ReLU()(Conv2D(filters, (3, 3), padding="same")(conv1))
     conv3 = ReLU()(Conv2D(filters, (3, 3), padding="same")(conv2))
-    flat = Flatten()(conv3)
 
-    pol1 = ReLU()(Dense(128)(flat))
-    pol = Softmax()(Dense(Game.num_actions)(pol1))
+    pol1 = ReLU()(Conv2D(32, (3, 3), padding='same', name='pol1')(conv3))
+    pol2 = Flatten()(pol1)
+    pol3 = ReLU()(Dense(128, name='pol3')(pol2))
+    pol = Softmax()(Dense(Game.num_actions, name='pol_final')(pol3))
 
-    val1 = ReLU()(Dense(128)(flat))
-    val = Softmax()(Dense(3)(val1))
+    val1 = ReLU()(Conv2D(32, (3, 3), padding='same')(conv3))
+    flat = Flatten()(val1)
+    val2 = ReLU()(Dense(128)(flat))
+    val = Softmax()(Dense(3)(val2))
 
     model = Model(inputs=state_input, outputs=[pol, val])
     model.compile()
