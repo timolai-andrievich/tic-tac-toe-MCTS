@@ -33,6 +33,7 @@ class Node:
         for action, node in self.children.items():
             if res is None or max_value < node.value():
                 res = action
+                max_value = node.value()
         return res, self.children[res]
 
     def expand(self, game: Game, action_probs: ndarray) -> None:
