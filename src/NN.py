@@ -45,6 +45,9 @@ class NN:
         else:
             self.model = tf.keras.models.load_model(file_path)
 
+    def update_config(self, config: Config):
+        self.optimizer.learning_rate = config.learning_rate
+
     def policy_function(self, position: Position) -> Tuple[ndarray, ndarray]:
         """Evaluates the position and returns probabilities of actions and evaluation score"""
         state = position.vectorize()[np.newaxis, ...]

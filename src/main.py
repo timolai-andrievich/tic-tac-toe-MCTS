@@ -10,8 +10,8 @@ from NN import NN
 from config import Config
 
 
-def train(config: Config, file_path=None):
-    nn = NN(config, file_path=file_path)
+def train(nn: NN, config: Config):
+    nn.update_config(config)
     exploration_noise = config.starting_exploration_noise
     for i in tqdm.tqdm(range(config.iteration_count)):
         training_data: List[Tuple[Image, Tuple[ndarray, ndarray]]] = []
@@ -49,16 +49,23 @@ def train(config: Config, file_path=None):
 def main():
     config = Config()
     config.learning_rate = 2e-1
-    config.games_in_iteration = 10
-    config.mcts_playout = 10
+    config.games_in_iteration = 50
+    config.mcts_playout = 400
     config.iteration_count = 10
-    config.starting_exploration_noise = 0.5
+    config.starting_exploration_noise = 1
     config.min_exploration_noise = 0.1
-    config.exploration_decay = 0.9
-    nn = train(config)
-    config.mcts_playout = 50
+    config.exploration_decay = 0.95
+    nn = train(NN(config), config)
+    config.starting_exploration_noise = .4
+    config.learning_rate = 1e-2
+    config.iteration_count = 40
+    nn = train(nn, config)
+    config.starting_exploration_noise = .2
+    config.min_exploration_noise = .05
+    config.learning_rate = 2e-3
+    config.iteration_count = 50
+    nn = train(nn, config)
     from utils import evaluate_model_against_minmax
-
     print(evaluate_model_against_minmax(nn, config))
 
 
