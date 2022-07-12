@@ -1,7 +1,5 @@
-from hashlib import sha1
 import numpy as np
 from numpy import ndarray
-
 
 NUM_ACTIONS: int = 9
 BOARD_WIDTH = 3
@@ -18,7 +16,7 @@ class Position:
         self.board: ndarray = board  # Array with shape (BOARD_HEIGHT, BOARD_WIDTH)
         assert self.board.shape == (BOARD_HEIGHT, BOARD_WIDTH)
 
-    def to_image(self) -> Image:
+    def to_image(self) -> str:
         """Returns the representation of the position that 
         preserves all the information about the board"""
         res = ""
@@ -39,34 +37,34 @@ class Position:
         # Check for horizontal slices
         for i in range(BOARD_HEIGHT):
             for j in range(BOARD_WIDTH - IN_ROW + 1):
-                slice = self.board[i, j : j + IN_ROW + 1]
-                if (slice == 1).all():
+                board_slice = self.board[i, j : j + IN_ROW + 1]
+                if (board_slice == 1).all():
                     return 1
-                if (slice == -1).all():
+                if (board_slice == -1).all():
                     return -1
         # Check for vertical slices
         for i in range(BOARD_HEIGHT - IN_ROW + 1):
             for j in range(BOARD_WIDTH):
-                slice = self.board[i : i + IN_ROW, j]
-                if (slice == 1).all():
+                board_slice = self.board[i : i + IN_ROW, j]
+                if (board_slice == 1).all():
                     return 1
-                if (slice == -1).all():
+                if (board_slice == -1).all():
                     return -1
         # Check for diagonal slices
         for i in range(BOARD_HEIGHT - IN_ROW + 1):
             for j in range(BOARD_WIDTH - IN_ROW + 1):
-                slice = self.board[i : i + IN_ROW, j : j + IN_ROW].diagonal()
-                if (slice == 1).all():
+                board_slice = self.board[i : i + IN_ROW, j : j + IN_ROW].diagonal()
+                if (board_slice == 1).all():
                     return 1
-                if (slice == -1).all():
+                if (board_slice == -1).all():
                     return -1
         flipped = np.fliplr(self.board)
         for i in range(BOARD_HEIGHT - IN_ROW + 1):
             for j in range(BOARD_WIDTH - IN_ROW + 1):
-                slice = flipped[i : i + IN_ROW, j : j + IN_ROW].diagonal()
-                if (slice == 1).all():
+                board_slice = flipped[i : i + IN_ROW, j : j + IN_ROW].diagonal()
+                if (board_slice == 1).all():
                     return 1
-                if (slice == -1).all():
+                if (board_slice == -1).all():
                     return -1
         return 0 if (self.board != 0).all() else 2
 
@@ -87,9 +85,11 @@ class Position:
         return Position(self.board.copy())
 
     def visualize(self) -> str:
-        symbolFromInt = lambda x: {-1:'O',0:'.',1:'X'}[x]
-        b = np.vectorize(symbolFromInt)(self.board)
-        return '\n'.join([''.join(x) for x in b])
+        def symbol_from_int(x):
+            return {-1: "O", 0: ".", 1: "X"}[x]
+
+        b = np.vectorize(symbol_from_int)(self.board)
+        return "\n".join(["".join(x) for x in b])
 
 
 def position_from_image(pos: Image) -> Position:
@@ -111,7 +111,6 @@ class Game:
     num_layers = NUM_LAYERS
 
     def __init__(self, position=START_POSITION):
-
         self.position: Position = position  # Current in-game position
 
     def is_terminal(self) -> bool:
@@ -125,7 +124,9 @@ class Game:
 
     def get_actions(self) -> ndarray:
         """Returns the list of actions that are possible from the current position"""
-        return np.array(np.where(self.position.board.reshape(Game.num_actions) == 0)).reshape(-1)
+        return np.array(
+            np.where(self.position.board.reshape(Game.num_actions) == 0)
+        ).reshape(-1)
 
     def get_current_move(self) -> int:
         """Returns 1 if player who moved first should move now, 
@@ -147,43 +148,19 @@ class Game:
 
 
 def test_position():
-    pos = Position(
-        np.array(
-            [
-                [0,  0,  1],
-                [0,  1, -1],
-                [1, -1,  0],
-            ]
-        )
-    )
+    pos = Position(np.array([[0, 0, 1], [0, 1, -1], [1, -1, 0],]))
     assert pos.get_winner() == 1
     assert pos.get_current_move() == -1
-    assert pos.to_image()== "112120201"
+    assert pos.to_image() == "112120201"
     assert (position_from_image(pos.to_image()).board == pos.board).all()
-    pos = Position(
-        np.array(
-            [
-                [ 0,  0,  0],
-                [ 0,  0,  0],
-                [ 0,  0,  0],
-            ]
-        )
-    )
+    pos = Position(np.array([[0, 0, 0], [0, 0, 0], [0, 0, 0],]))
     assert pos.get_winner() == 2
     assert pos.get_current_move() == 1
     pos.vectorize()
     pos2 = pos.copy()
     pos2.board[0, 0] = 1
     assert not (pos.board == pos2.board).all()
-    pos = Position(
-        np.array(
-            [
-                [ 1,  0,  0],
-                [ 0,  1,  0],
-                [ 0,  0,  1],
-            ]
-        )
-    )
+    pos = Position(np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1],]))
     assert pos.get_winner() == 1
 
 
@@ -193,7 +170,7 @@ def test_game():
     assert game.get_winner() == 2
     print(game.get_actions().shape)
     print((Game.num_actions,))
-    assert(game.get_actions().shape == (Game.num_actions,))
+    assert game.get_actions().shape == (Game.num_actions,)
     assert (game.get_actions() == np.arange(game.num_actions)).all()
     game.commit_action(0)
     assert not game.is_terminal()

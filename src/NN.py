@@ -12,16 +12,15 @@ import tensorflow as tf
 from tensorflow.python.keras.layers import Dense, Conv2D, Flatten, Softmax, Input, ReLU
 from tensorflow.python.keras import Model
 from tensorflow.python.keras.losses import CategoricalCrossentropy
+from config import Config
 from tensorflow.keras.optimizers import Adam
-
-BATCH_SIZE = 32
 
 
 def create_model(filters=128):
-    input = Input(shape=(Game.board_height, Game.board_width, Game.num_layers))
-    conv1 = ReLU()(Conv2D(filters, (3, 3), padding='same')(input))
-    conv2 = ReLU()(Conv2D(filters, (3, 3), padding='same')(conv1))
-    conv3 = ReLU()(Conv2D(filters, (3, 3), padding='same')(conv2))
+    state_input = Input(shape=(Game.board_height, Game.board_width, Game.num_layers))
+    conv1 = ReLU()(Conv2D(filters, (3, 3), padding="same")(state_input))
+    conv2 = ReLU()(Conv2D(filters, (3, 3), padding="same")(conv1))
+    conv3 = ReLU()(Conv2D(filters, (3, 3), padding="same")(conv2))
     flat = Flatten()(conv3)
 
     pol1 = ReLU()(Dense(128)(flat))
@@ -30,7 +29,7 @@ def create_model(filters=128):
     val1 = ReLU()(Dense(128)(flat))
     val = Softmax()(Dense(3)(val1))
 
-    model = Model(inputs=input, outputs=[pol, val])
+    model = Model(inputs=state_input, outputs=[pol, val])
     model.compile()
     return model
 
@@ -38,9 +37,9 @@ def create_model(filters=128):
 class NN:
     """A wrapper for the network"""
 
-    def __init__(self, file_path=None):
+    def __init__(self, config: Config, file_path=None):
         self.loss = CategoricalCrossentropy()
-        self.optimizer = Adam(learning_rate=2e-2)
+        self.optimizer = Adam(config.learning_rate)
         if file_path is None:
             self.model = create_model()
         else:
@@ -65,12 +64,9 @@ class NN:
             val_loss = self.loss(y_val, pred_val)
             loss = act_loss + val_loss
         gradients = tape.gradient(loss, self.model.trainable_variables)
-        self.optimizer.apply_gradients(
-            zip(gradients, self.model.trainable_variables)
-        )
+        self.optimizer.apply_gradients(zip(gradients, self.model.trainable_variables))
 
-
-    def train(self, batch: List[Tuple[Image, Tuple[ndarray, ndarray]]]):
+    def train(self, config: Config, batch: List[Tuple[Image, Tuple[ndarray, ndarray]]]):
         """Trains the NN on a batch of data collected from self-play"""
         x = np.zeros((len(batch), Game.board_height, Game.board_width, Game.num_layers))
         y_act = np.zeros((len(batch), Game.num_actions))
@@ -80,6 +76,10 @@ class NN:
             x[i] = position_from_image(img).vectorize()
             y_act[i] = act
             y_val[i] = val
-        dataset = tf.data.Dataset.from_tensor_slices((x, y_act, y_val)).shuffle(10000).batch(BATCH_SIZE)
+        dataset = (
+            tf.data.Dataset.from_tensor_slices((x, y_act, y_val))
+            .shuffle(10000)
+            .batch(config.batch_size)
+        )
         for x, y_act, y_val in dataset:
             self.train_step(x, y_act, y_val)
