@@ -13,7 +13,6 @@ from tensorflow.python.keras.layers import Dense, Conv2D, Flatten, Softmax, Inpu
 from tensorflow.python.keras import Model
 from tensorflow.python.keras.losses import CategoricalCrossentropy
 from config import Config
-# noinspection PyUnresolvedReferences
 from tensorflow.keras.optimizers import Adam
 
 

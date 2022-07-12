@@ -39,7 +39,9 @@ class Node:
         legal_actions = game.get_actions()
         action_probs = action_probs.reshape(Game.num_actions)
         for i in legal_actions:
-            self.children[i] = Node(self, action_probs[i], self.current_move * -1, self.config)
+            self.children[i] = Node(
+                self, action_probs[i], self.current_move * -1, self.config
+            )
 
     def is_leaf(self) -> bool:
         """Returns True if the node is a leaf, false otherwise"""
@@ -54,8 +56,8 @@ class Node:
         return self.avg() * self.current_move * -1 + self.config.c_impact * self._prior * math.sqrt(
             self._parent.visits
         ) / (
-                       1 + self.visits
-               )
+            1 + self.visits
+        )
 
     def update(self, new_score):
         """Update the score of the node"""
@@ -76,9 +78,7 @@ class MCTS:
         self.config = config
         self.root = Node(None, 0, 1, self.config)
 
-    def run(
-            self, game: Game, policy_function
-    ) -> Tuple[ndarray, ndarray]:
+    def run(self, game: Game, policy_function) -> Tuple[ndarray, ndarray]:
         """Returns the list of probabilities of actions"""
         for _ in range(self.config.mcts_playout):
             self.simulate(game.copy(), policy_function)

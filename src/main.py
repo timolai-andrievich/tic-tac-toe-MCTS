@@ -22,11 +22,9 @@ def train(config: Config, file_path=None):
                 pass
             tree = MCTS(config)
             while not game.is_terminal():
-                probs, wdl = tree.run(
-                    game.copy(), nn.policy_function
-                )
+                probs, wdl = tree.run(game.copy(), nn.policy_function)
                 probs = probs * (
-                        1 - exploration_noise
+                    1 - exploration_noise
                 ) + exploration_noise * np.random.dirichlet(np.ones(Game.num_actions))
                 legal_actions = game.get_actions()
                 for a in range(Game.num_actions):
@@ -54,12 +52,13 @@ def main():
     config.games_in_iteration = 10
     config.mcts_playout = 10
     config.iteration_count = 10
-    config.starting_exploration_noise = .5
-    config.min_exploration_noise = .1
-    config.exploration_decay = .9
+    config.starting_exploration_noise = 0.5
+    config.min_exploration_noise = 0.1
+    config.exploration_decay = 0.9
     nn = train(config)
     config.mcts_playout = 50
     from utils import evaluate_model_against_minmax
+
     print(evaluate_model_against_minmax(nn, config))
 
 

@@ -37,7 +37,7 @@ class Position:
         # Check for horizontal slices
         for i in range(BOARD_HEIGHT):
             for j in range(BOARD_WIDTH - IN_ROW + 1):
-                board_slice = self.board[i, j: j + IN_ROW + 1]
+                board_slice = self.board[i, j : j + IN_ROW + 1]
                 if (board_slice == 1).all():
                     return 1
                 if (board_slice == -1).all():
@@ -45,7 +45,7 @@ class Position:
         # Check for vertical slices
         for i in range(BOARD_HEIGHT - IN_ROW + 1):
             for j in range(BOARD_WIDTH):
-                board_slice = self.board[i: i + IN_ROW, j]
+                board_slice = self.board[i : i + IN_ROW, j]
                 if (board_slice == 1).all():
                     return 1
                 if (board_slice == -1).all():
@@ -53,7 +53,7 @@ class Position:
         # Check for diagonal slices
         for i in range(BOARD_HEIGHT - IN_ROW + 1):
             for j in range(BOARD_WIDTH - IN_ROW + 1):
-                board_slice = self.board[i: i + IN_ROW, j: j + IN_ROW].diagonal()
+                board_slice = self.board[i : i + IN_ROW, j : j + IN_ROW].diagonal()
                 if (board_slice == 1).all():
                     return 1
                 if (board_slice == -1).all():
@@ -61,7 +61,7 @@ class Position:
         flipped = np.fliplr(self.board)
         for i in range(BOARD_HEIGHT - IN_ROW + 1):
             for j in range(BOARD_WIDTH - IN_ROW + 1):
-                board_slice = flipped[i: i + IN_ROW, j: j + IN_ROW].diagonal()
+                board_slice = flipped[i : i + IN_ROW, j : j + IN_ROW].diagonal()
                 if (board_slice == 1).all():
                     return 1
                 if (board_slice == -1).all():
@@ -87,6 +87,7 @@ class Position:
     def visualize(self) -> str:
         def symbol_from_int(x):
             return {-1: "O", 0: ".", 1: "X"}[x]
+
         b = np.vectorize(symbol_from_int)(self.board)
         return "\n".join(["".join(x) for x in b])
 
@@ -147,19 +148,19 @@ class Game:
 
 
 def test_position():
-    pos = Position(np.array([[0, 0, 1], [0, 1, -1], [1, -1, 0], ]))
+    pos = Position(np.array([[0, 0, 1], [0, 1, -1], [1, -1, 0],]))
     assert pos.get_winner() == 1
     assert pos.get_current_move() == -1
     assert pos.to_image() == "112120201"
     assert (position_from_image(pos.to_image()).board == pos.board).all()
-    pos = Position(np.array([[0, 0, 0], [0, 0, 0], [0, 0, 0], ]))
+    pos = Position(np.array([[0, 0, 0], [0, 0, 0], [0, 0, 0],]))
     assert pos.get_winner() == 2
     assert pos.get_current_move() == 1
     pos.vectorize()
     pos2 = pos.copy()
     pos2.board[0, 0] = 1
     assert not (pos.board == pos2.board).all()
-    pos = Position(np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1], ]))
+    pos = Position(np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1],]))
     assert pos.get_winner() == 1
 
 

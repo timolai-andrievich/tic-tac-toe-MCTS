@@ -1,14 +1,15 @@
 import numpy as np
 
-from Game import Game, START_POSITION
+from Game import Game, START_POSITION, test_position, test_game
 from MCTS import Node, MCTS
 from NN import NN, create_model
-from src.config import Config
+from config import Config
 
 
 unit_test_config = Config()
 unit_test_config.mcts_playout = 20
 unit_test_config.test_games = 1
+
 
 def test_nnmodel():
     pos = START_POSITION.copy()
@@ -57,7 +58,3 @@ def test_tree():
     game = Game()
     tree = MCTS(unit_test_config)
     tree.run(game, nn.policy_function)
-
-
-if __name__ == "__main__":
-    test_nn()
