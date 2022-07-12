@@ -1,63 +1,32 @@
-import glob
-import itertools
-import numpy as np
-from torch import rand
-from Game import Game, Image
-from NN import NN
-from MCTS import MCST
 from typing import List, Tuple
-from numpy import ndarray
+
+import numpy as np
 import tqdm
-import random
+from numpy import ndarray
 
-iteration_count = 100
-games_in_iteration = 50
-mcts_playout = 400
-batch_size = -1
-checkpoints = 10
-test_games = 50
-starting_exploration_noise = 1
-exploration_decay = 0.90
-min_exploration_noise = 0.15
+from Game import Game, Image
+from MCTS import MCTS
+from NN import NN
+from config import Config
 
 
-def validate_parameters():
-    assert 1 > exploration_decay >= 0
-    assert 1 >= starting_exploration_noise >= 0
-    assert 1 >= min_exploration_noise >= 0
-    assert mcts_playout > 1  # Otherwise, the root of the tree will have no children
-
-
-validate_parameters()
-
-
-def make_batch(
-    training_data: List[Tuple[Image, Tuple[ndarray, float]]],
-    batch_size: int = batch_size,
-) -> List[Tuple[Image, Tuple[ndarray, float]]]:
-    if batch_size == -1:
-        return training_data
-    batch: List[Tuple[Image, Tuple[ndarray, float]]] = []
-    for _ in range(batch_size):
-        batch.append(random.choice(training_data))
-    return batch
-
-
-def train(file_path=None):
-    nn = NN(file_path=file_path)
-    exploration_noise = starting_exploration_noise
-    for i in tqdm.tqdm(range(iteration_count)):
-        training_data: List[Tuple[Image, Tuple[ndarray, float]]] = []
-        for _ in tqdm.tqdm(range(games_in_iteration)):
+def train(config: Config, file_path=None):
+    nn = NN(config, file_path=file_path)
+    exploration_noise = config.starting_exploration_noise
+    for i in tqdm.tqdm(range(config.iteration_count)):
+        training_data: List[Tuple[Image, Tuple[ndarray, ndarray]]] = []
+        for _ in tqdm.tqdm(range(config.games_in_iteration)):
             game = Game().copy()
             debug_x = game.is_terminal()
             if debug_x:
                 pass
-            tree = MCST()
+            tree = MCTS(config)
             while not game.is_terminal():
-                probs, eval = tree.run(game.copy(), nn.policy_function, mcts_playout)
+                probs, wdl = tree.run(
+                    game.copy(), nn.policy_function
+                )
                 probs = probs * (
-                    1 - exploration_noise
+                        1 - exploration_noise
                 ) + exploration_noise * np.random.dirichlet(np.ones(Game.num_actions))
                 legal_actions = game.get_actions()
                 for a in range(Game.num_actions):
@@ -65,25 +34,34 @@ def train(file_path=None):
                         probs[a] = 0
                 probs = probs / probs.sum()
                 action = np.random.choice(Game.num_actions, p=probs)
-                training_data.append((game.position.to_image(), (probs, eval)))
+                training_data.append((game.position.to_image(), (probs, wdl)))
                 game.commit_action(action)
                 tree.commit_action(action)
-        batch = make_batch(training_data)
-        nn.train(batch)
-        if i > 0 and i % checkpoints == 0:
+        batch = training_data
+        nn.train(config, batch)
+        if i > 0 and i % config.checkpoints == 0:
             nn.dump(info=f"iteration_{i}")
-        exploration_noise *= exploration_decay
-        if exploration_noise < min_exploration_noise:
-            exploration_noise = min_exploration_noise
+        exploration_noise *= config.exploration_decay
+        if exploration_noise < config.min_exploration_noise:
+            exploration_noise = config.min_exploration_noise
     nn.dump()
     return nn
 
 
 def main():
-    from utils import evaluate_models_against_minmax, play_and_visualize_against_minmax
-    evaluate_models_against_minmax(games=1000, playout=50)
+    config = Config()
+    config.learning_rate = 2e-1
+    config.games_in_iteration = 10
+    config.mcts_playout = 10
+    config.iteration_count = 10
+    config.starting_exploration_noise = .5
+    config.min_exploration_noise = .1
+    config.exploration_decay = .9
+    nn = train(config)
+    config.mcts_playout = 50
+    from utils import evaluate_model_against_minmax
+    print(evaluate_model_against_minmax(nn, config))
 
 
 if __name__ == "__main__":
-    validate_parameters()
     main()

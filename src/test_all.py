@@ -1,8 +1,14 @@
-from Game import Game, START_POSITION, test_game, test_position
-from NN import NN, create_model
-from MCTS import Node, MCST
 import numpy as np
-from typing import Tuple
+
+from Game import Game, START_POSITION
+from MCTS import Node, MCTS
+from NN import NN, create_model
+from src.config import Config
+
+
+unit_test_config = Config()
+unit_test_config.mcts_playout = 20
+unit_test_config.test_games = 1
 
 def test_nnmodel():
     pos = START_POSITION.copy()
@@ -14,43 +20,44 @@ def test_nnmodel():
 
 
 def test_nn():
-    nn = NN()
+    config = unit_test_config
+    nn = NN(config)
     pos = START_POSITION.copy()
-    state = pos.vectorize()
+    pos.vectorize()
     nn.policy_function(pos)
     batch = [
         (pos.to_image(), (np.zeros(Game.num_actions), np.array([0, 1, 0]),),),
         (pos.to_image(), (np.zeros(Game.num_actions), np.array([0, 1, 0]),),),
     ]
-    nn.train(batch)
+    nn.train(config, batch)
     act, val = nn.policy_function(pos)
-    nn.dump(file_name='../models/test')
-    nn = NN(file_path='../models/test')
-    nact, nval = nn.policy_function(pos)
-    assert (act - nact).sum() < 1e-3
-    assert (val - nval).sum() < 1e-3
+    nn.dump(file_name="../models/test")
+    nn = NN(config, file_path="../models/test")
+    new_act, new_val = nn.policy_function(pos)
+    assert (act - new_act).sum() < 1e-3
+    assert (val - new_val).sum() < 1e-3
 
 
 def test_node():
-    root = Node(None, 0, 1)
+    config = unit_test_config
+    root = Node(None, 0, 1, config)
     game = Game()
     probs = np.ones(Game.num_actions) / Game.num_actions
     assert root.is_leaf()
     assert root.is_root()
     root.expand(game, probs)
-    _: Tuple[int, Node] = root.select()
-    action: int = _[0]
-    node: Node = _[1]
+    _, node = root.select()
     node.update_recursive(np.array([0, 1, 0]))
     assert (root.results == np.array([0, 1, 0])).all()
     assert (node.results == np.array([0, 1, 0])).all()
 
 
 def test_tree():
-    nn = NN()
+    nn = NN(unit_test_config)
     game = Game()
-    tree = MCST()
-    tree.run(game, nn.policy_function, 100)
+    tree = MCTS(unit_test_config)
+    tree.run(game, nn.policy_function)
+
 
 if __name__ == "__main__":
     test_nn()
