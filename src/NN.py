@@ -4,6 +4,7 @@ from Game import (
     Game,
     Position,
     Image,
+    augment_data,
     position_from_image,
 )
 from typing import Tuple, List
@@ -82,6 +83,7 @@ class NN:
             x[i] = position_from_image(img).vectorize()
             y_act[i] = act
             y_val[i] = val
+        x, y_act, y_val = augment_data(x, y_act, y_val)
         dataset = (
             tf.data.Dataset.from_tensor_slices((x, y_act, y_val))
             .shuffle(10000)
