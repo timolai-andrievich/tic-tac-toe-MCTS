@@ -1,17 +1,19 @@
 from typing import List, Tuple
+from isort import file
 
 import numpy as np
 import tqdm
 from numpy import ndarray
 
-from Game import Game, Image
+from Game import START_POSITION, Game, Image, Position
 from MCTS import MCTS
 from NN import NN
 from config import Config
+from utils import play_and_visualize_against_minmax
 
 
-def train(config: Config, file_path=None):
-    nn = NN(config, file_path=file_path)
+def train(nn: NN, config: Config):
+    nn.update_config(config)
     exploration_noise = config.starting_exploration_noise
     for i in tqdm.tqdm(range(config.iteration_count)):
         training_data: List[Tuple[Image, Tuple[ndarray, ndarray]]] = []
@@ -39,6 +41,8 @@ def train(config: Config, file_path=None):
         nn.train(config, batch)
         if i > 0 and i % config.checkpoints == 0:
             nn.dump(info=f"iteration_{i}")
+        if i % config.test_checkpoints == 0:
+            play_and_visualize_against_minmax(nn, 1, config)
         exploration_noise *= config.exploration_decay
         if exploration_noise < config.min_exploration_noise:
             exploration_noise = config.min_exploration_noise
@@ -48,18 +52,23 @@ def train(config: Config, file_path=None):
 
 def main():
     config = Config()
-    config.learning_rate = 2e-1
-    config.games_in_iteration = 10
-    config.mcts_playout = 10
-    config.iteration_count = 10
-    config.starting_exploration_noise = 0.5
-    config.min_exploration_noise = 0.1
-    config.exploration_decay = 0.9
-    nn = train(config)
+    config.learning_rate = 2e-3
+    config.games_in_iteration = 50
     config.mcts_playout = 50
-    from utils import evaluate_model_against_minmax
-
-    print(evaluate_model_against_minmax(nn, config))
+    config.iteration_count = 10
+    config.starting_exploration_noise = .25
+    config.min_exploration_noise = 0.1
+    config.exploration_decay = 0.95
+    nn = train(NN(config), config)
+    config.starting_exploration_noise = .2
+    config.learning_rate = 2e-3
+    config.iteration_count = 40
+    nn = train(nn, config)
+    config.starting_exploration_noise = .15
+    config.min_exploration_noise = .01
+    config.learning_rate = 2e-4
+    config.iteration_count = 50
+    nn = train(nn, config)
 
 
 if __name__ == "__main__":

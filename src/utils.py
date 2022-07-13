@@ -453,9 +453,11 @@ def play_and_visualize_against_minmax(
     policy = nn.policy_function
     i: int = 0
     while not game.is_terminal():
+        raw_probs = None
         legal_actions = game.get_actions()
         if first_starts and i % 2 == 0 or not first_starts and i % 2 == 1:
             probs, results = tree.run(game.copy(), policy)
+            raw_probs, _ = policy(game.position)
             if action_choice == "best":
                 action = np.argmax(probs)
             elif action_choice == "probabilities":
@@ -477,6 +479,10 @@ def play_and_visualize_against_minmax(
         print(
             f"{(probs.reshape((Game.board_height, Game.board_width)) * 100).round(2)}"
         )
+        if raw_probs is not None:
+            print(
+                f"{(raw_probs.reshape((Game.board_height, Game.board_width)) * 100)}"
+            )
         tree.commit_action(action)
         game.commit_action(action)
         pos = list(game.position.visualize())
