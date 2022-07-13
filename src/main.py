@@ -55,18 +55,19 @@ def main():
     config.learning_rate = 2e-3
     config.games_in_iteration = 50
     config.mcts_playout = 50
-    config.iteration_count = 10
-    config.starting_exploration_noise = .25
+    config.iteration_count = 50
+    config.starting_exploration_noise = .5
     config.min_exploration_noise = 0.1
     config.exploration_decay = 0.95
-    nn = train(NN(config), config)
-    config.starting_exploration_noise = .2
-    config.learning_rate = 2e-3
-    config.iteration_count = 40
+    nn = NN(config)
+    nn = train(nn, config)
+    config.starting_exploration_noise = .25
+    config.learning_rate = 2e-4
+    config.iteration_count = 50
     nn = train(nn, config)
     config.starting_exploration_noise = .15
     config.min_exploration_noise = .01
-    config.learning_rate = 2e-4
+    config.learning_rate = 2e-5
     config.iteration_count = 50
     nn = train(nn, config)
 

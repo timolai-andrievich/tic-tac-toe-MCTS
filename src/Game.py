@@ -1,5 +1,6 @@
 import numpy as np
 from numpy import ndarray
+from typing import Tuple
 
 NUM_ACTIONS: int = 9
 BOARD_WIDTH = 3
@@ -147,6 +148,32 @@ class Game:
         self.position.board.reshape(-1)[action] = self.get_current_move()
 
 
+def augment_data(x: ndarray, y_act: ndarray, y_val: ndarray) -> Tuple[ndarray, ndarray, ndarray]:
+    batch_size = x.shape[0]
+    y_act = y_act.reshape(-1, 3, 3)
+    result_x: ndarray = np.zeros((batch_size * 4, 3, 3, 4))
+    result_y: ndarray = np.zeros((batch_size * 4, 3, 3))
+    result_y_val: ndarray = np.zeros((batch_size * 4, 3))
+
+    result_x[:batch_size] = x
+    result_y[:batch_size] = y_act
+    result_y_val[:batch_size] = y_val
+
+    result_x[batch_size:batch_size * 2] = np.rot90(x, k=1, axes=(1, 2))
+    result_y[batch_size:batch_size * 2] = np.rot90(y_act, k=1, axes=(1, 2))
+    result_y_val[batch_size:batch_size * 2] = y_val
+
+    result_x[batch_size * 2:batch_size * 3] = np.rot90(x, k=2, axes=(1, 2))
+    result_y[batch_size * 2:batch_size * 3] = np.rot90(y_act, k=2, axes=(1, 2))
+    result_y_val[batch_size * 2:batch_size * 3] = y_val
+
+    result_x[batch_size * 3:] = np.rot90(x, k=3, axes=(1, 2))
+    result_y[batch_size * 3:] = np.rot90(y_act, k=3, axes=(1, 2))
+    result_y_val[batch_size * 3:] = y_val
+
+    return result_x, result_y.reshape((-1, 9)), result_y_val
+
+
 def test_position():
     pos = Position(np.array([[0, 0, 1], [0, 1, -1], [1, -1, 0],]))
     assert pos.get_winner() == 1
@@ -181,3 +208,4 @@ def test_game():
     game.commit_action(8)
     assert game.get_winner() == 1
     assert game.is_terminal()
+
