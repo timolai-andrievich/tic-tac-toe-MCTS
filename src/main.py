@@ -33,6 +33,8 @@ def train(nn: NN, config: Config):
                     if not a in legal_actions:
                         probs[a] = 0
                 probs = probs / probs.sum()
+                probs = np.power(probs, 1 / config.temp)
+                probs = probs / probs.sum()
                 action = np.random.choice(Game.num_actions, p=probs)
                 training_data.append((game.position.to_image(), (probs, wdl)))
                 game.commit_action(action)
