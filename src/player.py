@@ -12,7 +12,7 @@ class Player:
 
 class RandomPlayer(Player):
     def get_action(self, game: Game) -> int:
-        return np.random.randint(Game.num_actions)
+        return np.random.choice(game.get_actions())
 
 class MinMaxPlayer(Player):
     def __init__(self):
@@ -29,8 +29,8 @@ class MinMaxPlayer(Player):
             for action in game.get_actions():
                 scratch_game = game.copy()
                 scratch_game.commit_action(action)
-                if res is None or res < game.get_current_move() * self.evaluate(scratch_game):
-                    res = game.get_current_move() * self.evaluate(scratch_game)
+                if res is None or res * game.get_current_move() < game.get_current_move() * self.evaluate(scratch_game):
+                    res = self.evaluate(scratch_game)
             self.cache[image] = res
         return self.cache[image]
 
@@ -61,5 +61,9 @@ class ModelPlayer(Player):
 
     def get_action(self, game: Game) -> int:
         actions, results = self.nn.policy_function(game.position)
+        legal_actions = game.get_actions()
+        for i in range(Game.num_actions):
+            if i not in legal_actions:
+                actions[i] = 0
         action = np.argmax(actions)
         return action

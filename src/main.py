@@ -9,7 +9,8 @@ from Game import START_POSITION, Game, Image, Position
 from MCTS import MCTS
 from NN import NN
 from config import Config
-from utils import play_and_visualize_against_minmax
+from player import RandomPlayer, MinMaxPlayer
+from utils import evaluate_models_against_player, evaluate_pure_models_against_player
 
 
 def train(nn: NN, config: Config):
@@ -70,6 +71,8 @@ def main():
     config.learning_rate = 2e-5
     config.iteration_count = 50
     nn = train(nn, config)
+    random_player = RandomPlayer()
+    evaluate_pure_models_against_player(config, random_player, 500)
 
 
 if __name__ == "__main__":
