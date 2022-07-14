@@ -61,7 +61,7 @@ class MctsPlayer(Player):
         tree = MCTS(self.config)
         actions, results = tree.run(game.copy(), self.nn.policy_function)
         action = np.argmax(actions)
-        return action
+        return int(action)
 
 
 class ModelPlayer(Player):

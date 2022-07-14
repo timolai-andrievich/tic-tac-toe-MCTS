@@ -1,16 +1,16 @@
-from typing import List, Tuple
-from typing_extensions import Self
+from typing import Tuple
 
 import numpy as np
 import tqdm
 from numpy import ndarray
 
-from Game import Game, Image
+from Game import Game
 from MCTS import MCTS
 from NN import NN
 from config import Config
 from player import RandomPlayer
 from utils import evaluate_pure_models_against_player
+
 
 class SelfplayGenerator:
     def __init__(self, nn: NN, config: Config):
@@ -20,13 +20,11 @@ class SelfplayGenerator:
         self.y_act = np.zeros((0, Game.num_actions))
         self.y_wdl = np.zeros((0, 3))
 
-    
     def generate_games(self, count: int) -> Tuple[ndarray, ndarray, ndarray]:
         for _ in range(count):
             self.generate_game()
         return self.x, self.y_act, self.y_wdl
 
-    
     def generate_game(self):
         game = Game()
         x: ndarray = np.zeros((self.config.max_moves, Game.board_height, Game.board_width, Game.num_layers))
@@ -56,15 +54,12 @@ class SelfplayGenerator:
         self.x = np.append(self.x, x[:current_move], axis=0)
         self.y_act = np.append(self.y_act, y_act[:current_move], axis=0)
         self.y_wdl = np.append(self.y_wdl, y_wdl[:current_move], axis=0)
-    
-
 
 
 def train(nn: NN, config: Config):
     nn.update_config(config)
-    exploration_noise = config.starting_exploration_noise
+    config.exploration_noise = config.starting_exploration_noise
     for i in tqdm.tqdm(range(config.iteration_count)):
-        training_data: List[Tuple[Image, Tuple[ndarray, ndarray]]] = []
         generator = SelfplayGenerator(nn, config)
         training_data = generator.generate_games(config.games_in_iteration)
         nn.train(config, training_data)
@@ -83,8 +78,8 @@ def main():
     config = Config()
     config.learning_rate = 2e-3
     config.games_in_iteration = 50
-    config.mcts_playout = 50
-    config.iteration_count = 50
+    config.mcts_playout = 20
+    config.iteration_count = 30
     config.starting_exploration_noise = 0.5
     config.min_exploration_noise = 0.1
     config.exploration_decay = 0.95
@@ -92,12 +87,12 @@ def main():
     nn = train(nn, config)
     config.starting_exploration_noise = 0.25
     config.learning_rate = 2e-4
-    config.iteration_count = 50
+    config.iteration_count = 30
     nn = train(nn, config)
     config.starting_exploration_noise = 0.15
     config.min_exploration_noise = 0.01
     config.learning_rate = 2e-5
-    config.iteration_count = 50
+    config.iteration_count = 10
     nn = train(nn, config)
     random_player = RandomPlayer()
     evaluate_pure_models_against_player(config, random_player, 500)

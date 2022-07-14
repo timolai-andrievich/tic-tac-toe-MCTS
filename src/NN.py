@@ -1,22 +1,21 @@
+import time
+from typing import Tuple
+
 import numpy as np
+import tensorflow as tf
 from numpy import ndarray
+# noinspection PyUnresolvedReferences
+from tensorflow.keras.optimizers import Adam
+from tensorflow.python.keras import Model
+from tensorflow.python.keras.layers import Dense, Conv2D, Flatten, Softmax, Input, ReLU
+from tensorflow.python.keras.losses import CategoricalCrossentropy
+
 from Game import (
     Game,
     Position,
-    Image,
     augment_data,
-    position_from_image,
 )
-from typing import Tuple, List
-import time
-import tensorflow as tf
-from tensorflow.python.keras.layers import Dense, Conv2D, Flatten, Softmax, Input, ReLU
-from tensorflow.python.keras import Model
-from tensorflow.python.keras.losses import CategoricalCrossentropy
 from config import Config
-
-# noinspection PyUnresolvedReferences
-from tensorflow.keras.optimizers import Adam
 
 
 def create_model(filters=128):
