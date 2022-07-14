@@ -12,3 +12,5 @@ class Config:
     minibatch_size = 128
     learning_rate = 1e-1
     test_checkpoints = 1
+    max_moves = 9
+    temp = 1
