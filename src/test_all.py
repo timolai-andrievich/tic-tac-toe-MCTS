@@ -1,10 +1,10 @@
 import numpy as np
 
+# noinspection PyUnresolvedReferences
 from Game import Game, START_POSITION, test_position, test_game
 from MCTS import Node, MCTS
 from NN import NN, create_model
 from config import Config
-
 
 unit_test_config = Config()
 unit_test_config.mcts_playout = 20

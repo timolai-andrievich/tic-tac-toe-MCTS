@@ -18,7 +18,7 @@ class Position:
         assert self.board.shape == (BOARD_HEIGHT, BOARD_WIDTH)
 
     def to_image(self) -> str:
-        """Returns the representation of the position that 
+        """Returns the representation of the position that
         preserves all the information about the board"""
         res = ""
         for i in self.board.reshape(-1):
@@ -26,19 +26,19 @@ class Position:
         return res
 
     def get_current_move(self) -> int:
-        """Returns 1 if player who moved first should move now, 
+        """Returns 1 if player who moved first should move now,
         -1 if the player who moved second should move now"""
         return 1 if (self.board != 0).sum() % 2 == 0 else -1
 
     def get_winner(self) -> int:
-        """Returns 1 if player who moved first won, 
-        0 if the game is a tie, 
-        -1 if the player who moved second won, 
+        """Returns 1 if player who moved first won,
+        0 if the game is a tie,
+        -1 if the player who moved second won,
         2 if the game is not over"""
         # Check for horizontal slices
         for i in range(BOARD_HEIGHT):
             for j in range(BOARD_WIDTH - IN_ROW + 1):
-                board_slice = self.board[i, j : j + IN_ROW + 1]
+                board_slice = self.board[i, j: j + IN_ROW + 1]
                 if (board_slice == 1).all():
                     return 1
                 if (board_slice == -1).all():
@@ -46,7 +46,7 @@ class Position:
         # Check for vertical slices
         for i in range(BOARD_HEIGHT - IN_ROW + 1):
             for j in range(BOARD_WIDTH):
-                board_slice = self.board[i : i + IN_ROW, j]
+                board_slice = self.board[i: i + IN_ROW, j]
                 if (board_slice == 1).all():
                     return 1
                 if (board_slice == -1).all():
@@ -54,7 +54,7 @@ class Position:
         # Check for diagonal slices
         for i in range(BOARD_HEIGHT - IN_ROW + 1):
             for j in range(BOARD_WIDTH - IN_ROW + 1):
-                board_slice = self.board[i : i + IN_ROW, j : j + IN_ROW].diagonal()
+                board_slice = self.board[i: i + IN_ROW, j: j + IN_ROW].diagonal()
                 if (board_slice == 1).all():
                     return 1
                 if (board_slice == -1).all():
@@ -62,7 +62,7 @@ class Position:
         flipped = np.fliplr(self.board)
         for i in range(BOARD_HEIGHT - IN_ROW + 1):
             for j in range(BOARD_WIDTH - IN_ROW + 1):
-                board_slice = flipped[i : i + IN_ROW, j : j + IN_ROW].diagonal()
+                board_slice = flipped[i: i + IN_ROW, j: j + IN_ROW].diagonal()
                 if (board_slice == 1).all():
                     return 1
                 if (board_slice == -1).all():
@@ -119,7 +119,7 @@ class Game:
         return self.position.get_winner() != 2
 
     def get_winner(self) -> int:
-        """Returns 1 if player who moved first won, 0 if the game is a tie, 
+        """Returns 1 if player who moved first won, 0 if the game is a tie,
         -1 if the player who moved second won"""
         return self.position.get_winner()
 
@@ -130,7 +130,7 @@ class Game:
         ).reshape(-1)
 
     def get_current_move(self) -> int:
-        """Returns 1 if player who moved first should move now, 
+        """Returns 1 if player who moved first should move now,
         -1 if the player who moved second should move now"""
         return self.position.get_current_move()
 
@@ -148,9 +148,11 @@ class Game:
         self.position.board.reshape(-1)[action] = self.get_current_move()
 
 
-def augment_data(x: ndarray, y_act: ndarray, y_val: ndarray) -> Tuple[ndarray, ndarray, ndarray]:
+def augment_data(
+        x: ndarray, y_act: ndarray, y_val: ndarray
+) -> Tuple[ndarray, ndarray, ndarray]:
     batch_size = x.shape[0]
-    y_act = y_act.reshape(-1, 3, 3)
+    y_act = y_act.reshape((-1, 3, 3))
     result_x: ndarray = np.zeros((batch_size * 4, 3, 3, 4))
     result_y: ndarray = np.zeros((batch_size * 4, 3, 3))
     result_y_val: ndarray = np.zeros((batch_size * 4, 3))
@@ -159,13 +161,13 @@ def augment_data(x: ndarray, y_act: ndarray, y_val: ndarray) -> Tuple[ndarray, n
     result_y[:batch_size] = y_act
     result_y_val[:batch_size] = y_val
 
-    result_x[batch_size:batch_size * 2] = np.rot90(x, k=1, axes=(1, 2))
-    result_y[batch_size:batch_size * 2] = np.rot90(y_act, k=1, axes=(1, 2))
-    result_y_val[batch_size:batch_size * 2] = y_val
+    result_x[batch_size: batch_size * 2] = np.rot90(x, k=1, axes=(1, 2))
+    result_y[batch_size: batch_size * 2] = np.rot90(y_act, k=1, axes=(1, 2))
+    result_y_val[batch_size: batch_size * 2] = y_val
 
-    result_x[batch_size * 2:batch_size * 3] = np.rot90(x, k=2, axes=(1, 2))
-    result_y[batch_size * 2:batch_size * 3] = np.rot90(y_act, k=2, axes=(1, 2))
-    result_y_val[batch_size * 2:batch_size * 3] = y_val
+    result_x[batch_size * 2: batch_size * 3] = np.rot90(x, k=2, axes=(1, 2))
+    result_y[batch_size * 2: batch_size * 3] = np.rot90(y_act, k=2, axes=(1, 2))
+    result_y_val[batch_size * 2: batch_size * 3] = y_val
 
     result_x[batch_size * 3:] = np.rot90(x, k=3, axes=(1, 2))
     result_y[batch_size * 3:] = np.rot90(y_act, k=3, axes=(1, 2))
@@ -175,19 +177,19 @@ def augment_data(x: ndarray, y_act: ndarray, y_val: ndarray) -> Tuple[ndarray, n
 
 
 def test_position():
-    pos = Position(np.array([[0, 0, 1], [0, 1, -1], [1, -1, 0],]))
+    pos = Position(np.array([[0, 0, 1], [0, 1, -1], [1, -1, 0], ]))
     assert pos.get_winner() == 1
     assert pos.get_current_move() == -1
     assert pos.to_image() == "112120201"
     assert (position_from_image(pos.to_image()).board == pos.board).all()
-    pos = Position(np.array([[0, 0, 0], [0, 0, 0], [0, 0, 0],]))
+    pos = Position(np.array([[0, 0, 0], [0, 0, 0], [0, 0, 0], ]))
     assert pos.get_winner() == 2
     assert pos.get_current_move() == 1
     pos.vectorize()
     pos2 = pos.copy()
     pos2.board[0, 0] = 1
     assert not (pos.board == pos2.board).all()
-    pos = Position(np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1],]))
+    pos = Position(np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1], ]))
     assert pos.get_winner() == 1
 
 
@@ -208,4 +210,3 @@ def test_game():
     game.commit_action(8)
     assert game.get_winner() == 1
     assert game.is_terminal()
-
