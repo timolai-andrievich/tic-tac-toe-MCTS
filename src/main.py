@@ -53,9 +53,9 @@ class SelfplayGenerator:
             current_move += 1
             game.commit_action(action)
             tree.commit_action(action)
-        self.x = np.append(self.x, x, axis=0)
-        self.y_act = np.append(self.y_act, y_act, axis=0)
-        self.y_wdl = np.append(self.y_wdl, y_wdl, axis=0)
+        self.x = np.append(self.x, x[:current_move], axis=0)
+        self.y_act = np.append(self.y_act, y_act[:current_move], axis=0)
+        self.y_wdl = np.append(self.y_wdl, y_wdl[:current_move], axis=0)
     
 
 
