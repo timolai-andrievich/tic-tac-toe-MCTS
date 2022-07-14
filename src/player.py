@@ -59,7 +59,7 @@ class MctsPlayer(Player):
 
     def get_action(self, game: Game) -> int:
         tree = MCTS(self.config)
-        actions, results = tree.run(game, self.nn.policy_function)
+        actions, results = tree.run(game.copy(), self.nn.policy_function)
         action = np.argmax(actions)
         return action
 
@@ -71,8 +71,5 @@ class ModelPlayer(Player):
     def get_action(self, game: Game) -> int:
         actions, results = self.nn.policy_function(game.position)
         legal_actions = game.get_actions()
-        for i in range(Game.num_actions):
-            if i not in legal_actions:
-                actions[i] = 0
-        action = np.argmax(actions)
+        action = max(legal_actions, key=lambda x: actions[x])
         return action
