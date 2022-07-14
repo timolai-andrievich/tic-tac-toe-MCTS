@@ -75,17 +75,9 @@ class NN:
         gradients = tape.gradient(loss, self.model.trainable_variables)
         self.optimizer.apply_gradients(zip(gradients, self.model.trainable_variables))
 
-    def train(self, config: Config, batch: List[Tuple[Image, Tuple[ndarray, ndarray]]]):
+    def train(self, config: Config, batch: Tuple[ndarray, ndarray, ndarray]):
         """Trains the NN on a batch of data collected from self-play"""
-        x = np.zeros((len(batch), Game.board_height, Game.board_width, Game.num_layers))
-        y_act = np.zeros((len(batch), Game.num_actions))
-        y_val = np.zeros((len(batch), 3))
-        for i in range(len(batch)):
-            img, (act, val) = batch[i]
-            x[i] = position_from_image(img).vectorize()
-            y_act[i] = act
-            y_val[i] = val
-        x, y_act, y_val = augment_data(x, y_act, y_val)
+        x, y_act, y_val = augment_data(*batch)
         dataset = (
             tf.data.Dataset.from_tensor_slices((x, y_act, y_val))
                 .shuffle(10000)
