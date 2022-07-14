@@ -26,10 +26,11 @@ def test_nn():
     pos = START_POSITION.copy()
     pos.vectorize()
     nn.policy_function(pos)
-    batch = [
-        (pos.to_image(), (np.zeros(Game.num_actions), np.array([0, 1, 0]),),),
-        (pos.to_image(), (np.zeros(Game.num_actions), np.array([0, 1, 0]),),),
-    ]
+    batch = (
+        pos.vectorize().reshape((-1, Game.board_height, Game.board_width, Game.num_layers)), 
+        np.ones((1, Game.num_actions)) / Game.num_actions, 
+        np.array([[0, 1, 0]]),
+    )
     nn.train(config, batch)
     act, val = nn.policy_function(pos)
     nn.dump(file_name="../models/test")

@@ -112,7 +112,7 @@ class Game:
     num_layers = NUM_LAYERS
 
     def __init__(self, position=START_POSITION):
-        self.position: Position = position  # Current in-game position
+        self.position: Position = position.copy()  # Current in-game position
 
     def is_terminal(self) -> bool:
         """Returns true if the position of the game is terminal"""

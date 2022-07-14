@@ -14,3 +14,4 @@ class Config:
     test_checkpoints = 1
     max_moves = 9
     temp = 1
+    exploration_noise = starting_exploration_noise
