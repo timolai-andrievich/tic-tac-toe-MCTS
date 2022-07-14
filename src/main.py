@@ -1,16 +1,15 @@
 from typing import List, Tuple
-from isort import file
 
 import numpy as np
 import tqdm
 from numpy import ndarray
 
-from Game import START_POSITION, Game, Image, Position
+from Game import Game, Image
 from MCTS import MCTS
 from NN import NN
 from config import Config
-from player import RandomPlayer, MinMaxPlayer
-from utils import evaluate_models_against_player, evaluate_pure_models_against_player
+from player import RandomPlayer
+from utils import evaluate_pure_models_against_player
 
 
 def train(nn: NN, config: Config):
@@ -27,7 +26,7 @@ def train(nn: NN, config: Config):
             while not game.is_terminal():
                 probs, wdl = tree.run(game.copy(), nn.policy_function)
                 probs = probs * (
-                    1 - exploration_noise
+                        1 - exploration_noise
                 ) + exploration_noise * np.random.dirichlet(np.ones(Game.num_actions))
                 legal_actions = game.get_actions()
                 for a in range(Game.num_actions):
@@ -43,7 +42,7 @@ def train(nn: NN, config: Config):
         if i > 0 and i % config.checkpoints == 0:
             nn.dump(info=f"iteration_{i}")
         if i % config.test_checkpoints == 0:
-            play_and_visualize_against_minmax(nn, 1, config)
+            pass
         exploration_noise *= config.exploration_decay
         if exploration_noise < config.min_exploration_noise:
             exploration_noise = config.min_exploration_noise
@@ -57,17 +56,17 @@ def main():
     config.games_in_iteration = 50
     config.mcts_playout = 50
     config.iteration_count = 50
-    config.starting_exploration_noise = .5
+    config.starting_exploration_noise = 0.5
     config.min_exploration_noise = 0.1
     config.exploration_decay = 0.95
     nn = NN(config)
     nn = train(nn, config)
-    config.starting_exploration_noise = .25
+    config.starting_exploration_noise = 0.25
     config.learning_rate = 2e-4
     config.iteration_count = 50
     nn = train(nn, config)
-    config.starting_exploration_noise = .15
-    config.min_exploration_noise = .01
+    config.starting_exploration_noise = 0.15
+    config.min_exploration_noise = 0.01
     config.learning_rate = 2e-5
     config.iteration_count = 50
     nn = train(nn, config)

@@ -1,20 +1,14 @@
 import glob
-import itertools
-import random
-import time
 from typing import Dict, List, Tuple
 
 import numpy as np
 import tqdm
-from colorama import Fore
-from numpy import ndarray
 from scipy.stats import beta
 
-from Game import Game, test_position, test_game
-from MCTS import MCTS
+from Game import Game
 from NN import NN
 from config import Config
-from player import MctsPlayer, ModelPlayer, Player, RandomPlayer
+from player import MctsPlayer, ModelPlayer, Player
 
 
 def play_game(p1: Player, p2: Player) -> int:
@@ -30,7 +24,7 @@ def play_game(p1: Player, p2: Player) -> int:
 
 def play_match(p1: Player, p2: Player, games: int, silent=False):
     results = [0, 0, 0]
-    for i in (range(games) if silent else tqdm.tqdm(range(games))):
+    for i in range(games) if silent else tqdm.tqdm(range(games)):
         players = (p2, p1) if i & 1 else (p1, p2)
         result = play_game(*players) * (-1 if i & 1 else 1)
         results[result] += 1
@@ -59,7 +53,9 @@ def calculate_distribution(positive, negative) -> Tuple[float, float, float]:
     )
 
 
-def evaluate_models_against_player(config: Config, player: Player, games: int, path='../models'):
+def evaluate_models_against_player(
+        config: Config, player: Player, games: int, path="../models"
+):
     files = glob.glob(f"{path}/*")
     models_results: Dict[str, List[int, int, int]] = {}
     for file_path in files:
@@ -72,12 +68,12 @@ def evaluate_models_against_player(config: Config, player: Player, games: int, p
     )
     for name, (t, w, l) in sorted_models:
         lb, av, ub = calculate_distribution(w + t / 2, l + t / 2)
-        print(
-            f"{name:>30}: +{w}-{l}={t}, elo: {lb:.0f} - {av:.0f} - {ub:.0f}"
-        )
+        print(f"{name:>30}: +{w}-{l}={t}, elo: {lb:.0f} - {av:.0f} - {ub:.0f}")
 
 
-def evaluate_pure_models_against_player(config: Config, player: Player, games: int, path='../models'):
+def evaluate_pure_models_against_player(
+        config: Config, player: Player, games: int, path="../models"
+):
     files = glob.glob(f"{path}/*")
     models_results: Dict[str, List[int, int, int]] = {}
     for file_path in files:
@@ -90,6 +86,4 @@ def evaluate_pure_models_against_player(config: Config, player: Player, games: i
     )
     for name, (t, w, l) in sorted_models:
         lb, av, ub = calculate_distribution(w + t / 2, l + t / 2)
-        print(
-            f"{name:>30}: +{w}-{l}={t}, elo: {lb:.0f} - {av:.0f} - {ub:.0f}"
-        )
+        print(f"{name:>30}: +{w}-{l}={t}, elo: {lb:.0f} - {av:.0f} - {ub:.0f}")

@@ -57,8 +57,8 @@ class Node:
         return self.avg() * self.current_move * -1 + self.config.c_impact * self._prior * math.sqrt(
             self._parent.visits
         ) / (
-            1 + self.visits
-        )
+                       1 + self.visits
+               )
 
     def update(self, new_score):
         """Update the score of the node"""
