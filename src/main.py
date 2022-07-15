@@ -56,21 +56,18 @@ class SelfplayGenerator:
         self.y_wdl = np.append(self.y_wdl, y_wdl[:current_move], axis=0)
 
 
-def train(nn: NN, config: Config):
+def train(nn: NN, config: Config, checkpoints=False):
     nn.update_config(config)
     config.exploration_noise = config.starting_exploration_noise
     for i in tqdm.tqdm(range(config.iteration_count)):
         generator = SelfplayGenerator(nn, config)
         training_data = generator.generate_games(config.games_in_iteration)
         nn.train(config, training_data)
-        if i > 0 and i % config.checkpoints == 0:
+        if checkpoints and i > 0 and i % config.checkpoints == 0:
             nn.dump(info=f"iteration_{i}")
-        if i % config.test_checkpoints == 0:
-            pass
         config.exploration_noise *= config.exploration_decay
         if config.exploration_noise < config.min_exploration_noise:
             config.exploration_noise = config.min_exploration_noise
-    nn.dump()
     return nn
 
 
@@ -94,8 +91,9 @@ def main():
     config.learning_rate = 2e-5
     config.iteration_count = 10
     nn = train(nn, config)
+    nn.dump()
     random_player = RandomPlayer()
-    evaluate_pure_models_against_player(config, random_player, 500)
+    evaluate_pure_models_against_player(config, random_player, 10000)
 
 
 if __name__ == "__main__":
