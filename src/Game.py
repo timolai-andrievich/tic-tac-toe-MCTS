@@ -38,7 +38,7 @@ class Position:
         # Check for horizontal slices
         for i in range(BOARD_HEIGHT):
             for j in range(BOARD_WIDTH - IN_ROW + 1):
-                board_slice = self.board[i, j: j + IN_ROW + 1]
+                board_slice = self.board[i, j: j + IN_ROW]
                 if (board_slice == 1).all():
                     return 1
                 if (board_slice == -1).all():
