@@ -6,7 +6,7 @@ import tqdm
 from scipy.stats import beta
 
 from game import Game
-from nn import NN
+from model import Model
 from config import Config
 from player import MctsPlayer, ModelPlayer, Player
 
@@ -15,7 +15,7 @@ def play_game(p1: Player, p2: Player) -> int:
     game = Game().copy()
     players = p1, p2
     i = 0
-    while not game.is_terminal():
+    while not game.is_finished():
         action = players[i & 1].get_action(game.copy())
         game.commit_action(action)
         i += 1
@@ -60,7 +60,7 @@ def evaluate_models_against_player(config: Config,
     files = glob.glob(f"{path}/*")
     models_results: Dict[str, List[int, int, int]] = {}
     for file_path in files:
-        nn = NN(config, file_path=file_path)
+        nn = Model(config, file_path=file_path)
         model_player = MctsPlayer(nn, config)
         models_results[file_path] = [0, 0, 0]
         models_results[file_path] = play_match(model_player, player, games)
@@ -78,7 +78,7 @@ def evaluate_pure_models_against_player(config: Config,
     files = glob.glob(f"{path}/*")
     models_results: Dict[str, List[int, int, int]] = {}
     for file_path in files:
-        nn = NN(config, file_path=file_path)
+        nn = Model(config, file_path=file_path)
         model_player = ModelPlayer(nn)
         models_results[file_path] = [0, 0, 0]
         models_results[file_path] = play_match(model_player, player, games)

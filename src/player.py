@@ -5,7 +5,7 @@ import numpy as np
 
 from game import Game
 from mcts import MCTS
-from nn import NN
+from model import Model
 from config import Config
 
 
@@ -30,7 +30,7 @@ class MinMaxPlayer(Player):
         image = game.position.to_image()
         if image in self.cache:
             return self.cache[image]
-        if game.is_terminal():
+        if game.is_finished():
             self.cache[image] = game.get_winner()
         else:
             res = None
@@ -56,7 +56,7 @@ class MinMaxPlayer(Player):
 
 class MctsPlayer(Player):
 
-    def __init__(self, nn: NN, config: Config):
+    def __init__(self, nn: Model, config: Config):
         self.nn = nn
         self.config = config
 
@@ -69,7 +69,7 @@ class MctsPlayer(Player):
 
 class ModelPlayer(Player):
 
-    def __init__(self, nn: NN):
+    def __init__(self, nn: Model):
         self.nn = nn
 
     def get_action(self, game: Game) -> int:

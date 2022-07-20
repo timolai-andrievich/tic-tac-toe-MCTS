@@ -3,7 +3,7 @@ import numpy as np
 # noinspection PyUnresolvedReferences
 from game import Game, START_POSITION, test_position, test_game
 from mcts import Node, MCTS
-from nn import NN, create_model
+from model import Model, create_model
 from config import Config
 
 unit_test_config = Config()
@@ -13,7 +13,7 @@ unit_test_config.test_games = 1
 
 def test_nnmodel():
     pos = START_POSITION.copy()
-    state = pos.vectorize()[np.newaxis, ...]
+    state = pos.get_state()[np.newaxis, ...]
     model = create_model()
     act, val = model(state)
     assert act.shape == (1, Game.num_actions)
@@ -22,20 +22,20 @@ def test_nnmodel():
 
 def test_nn():
     config = unit_test_config
-    nn = NN(config)
+    nn = Model(config)
     pos = START_POSITION.copy()
-    pos.vectorize()
+    pos.get_state()
     nn.policy_function(pos)
     batch = (
-        pos.vectorize().reshape(
+        pos.get_state().reshape(
             (-1, Game.board_height, Game.board_width, Game.num_layers)),
         np.ones((1, Game.num_actions)) / Game.num_actions,
         np.array([[0, 1, 0]]),
     )
     nn.train(config, batch)
     act, val = nn.policy_function(pos)
-    nn.dump(file_name="../models/test")
-    nn = NN(config, file_path="../models/test")
+    nn.save(file_name="../models/test")
+    nn = Model(config, file_path="../models/test")
     new_act, new_val = nn.policy_function(pos)
     assert (act - new_act).sum() < 1e-3
     assert (val - new_val).sum() < 1e-3
@@ -56,7 +56,7 @@ def test_node():
 
 
 def test_tree():
-    nn = NN(unit_test_config)
+    nn = Model(unit_test_config)
     game = Game()
     tree = MCTS(unit_test_config)
     tree.run(game, nn.policy_function)

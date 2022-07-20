@@ -12,7 +12,8 @@ Image = str
 
 
 class Position:
-    """Represents game position"""
+    """Represents game position
+    """
 
     def __init__(self, board: ndarray):
         self.board: ndarray = board  # Array with shape (BOARD_HEIGHT, BOARD_WIDTH)
@@ -87,7 +88,7 @@ class Position:
             res = 0
         return res
 
-    def vectorize(self) -> np.ndarray:
+    def get_state(self) -> np.ndarray:
         """Returns the array with the layered representation of the game board.
         The shape of the array is (Game.board_height, Game.board_width, Game.num_actions).
 
@@ -158,7 +159,7 @@ class Game:
     def __init__(self, position=START_POSITION):
         self.position: Position = position.copy()  # Current in-game position
 
-    def is_terminal(self) -> bool:
+    def is_finished(self) -> bool:
         """Returns True if the game is over.
 
         Returns:
@@ -224,7 +225,7 @@ class Game:
 
 def augment_data(source_tensor: ndarray, y_act: ndarray,
                  y_val: ndarray) -> Tuple[ndarray, ndarray, ndarray]:
-    """Augments data, generated through self-play by board rotations, flips, etc.
+    """Augments data generated through self-play by board rotations, flips, etc.
 
     Args:
         source_tensor (ndarray): Tensor with the positions information.
@@ -282,7 +283,7 @@ def test_position():
     ]))
     assert pos.get_winner() == 2
     assert pos.get_current_move() == 1
-    pos.vectorize()
+    pos.get_state()
     pos2 = pos.copy()
     pos2.board[0, 0] = 1
     assert not (pos.board == pos2.board).all()
@@ -298,18 +299,18 @@ def test_game():
     """Runs tests on the `Game` class. Supposed to be run automatically.
     """
     game = Game()
-    assert not game.is_terminal()
+    assert not game.is_finished()
     assert game.get_winner() == 2
     print(game.get_actions().shape)
     print((Game.num_actions,))
     assert game.get_actions().shape == (Game.num_actions,)
     assert (game.get_actions() == np.arange(game.num_actions)).all()
     game.commit_action(0)
-    assert not game.is_terminal()
+    assert not game.is_finished()
     assert (game.get_actions() == np.arange(1, game.num_actions)).all()
     game.commit_action(1)
     game.commit_action(4)
     game.commit_action(2)
     game.commit_action(8)
     assert game.get_winner() == 1
-    assert game.is_terminal()
+    assert game.is_finished()
