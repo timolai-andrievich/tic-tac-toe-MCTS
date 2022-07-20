@@ -1,4 +1,6 @@
 class Config:
+    """Class that contains hyperparameters for the neural network
+    """
     iteration_count = 100
     games_in_iteration = 50
     mcts_playout = 400

@@ -1,5 +1,5 @@
 from numpy import ndarray
-from Game import Game
+from game import Game
 from typing import Tuple, Dict, List
 import numpy as np
 import math
@@ -40,9 +40,8 @@ class Node:
         legal_actions = game.get_actions()
         action_probs = action_probs.reshape(Game.num_actions)
         for i in legal_actions:
-            self.children[i] = Node(
-                self, action_probs[i], self.current_move * -1, self.config
-            )
+            self.children[i] = Node(self, action_probs[i],
+                                    self.current_move * -1, self.config)
 
     def is_leaf(self) -> bool:
         """Returns True if the node is a leaf, false otherwise"""
@@ -54,11 +53,9 @@ class Node:
 
     def value(self) -> float:
         """Returns the UCB score of the node"""
-        return self.avg() * self.current_move * -1 + self.config.c_impact * self._prior * math.sqrt(
-            self._parent.visits
-        ) / (
-                       1 + self.visits
-               )
+        return self.avg(
+        ) * self.current_move * -1 + self.config.c_impact * self._prior * math.sqrt(
+            self._parent.visits) / (1 + self.visits)
 
     def update(self, new_score):
         """Update the score of the node"""
@@ -83,12 +80,10 @@ class MCTS:
         """Returns the list of probabilities of actions"""
         for _ in range(self.config.mcts_playout):
             self.simulate(game.copy(), policy_function)
-        visits = np.array(
-            [
-                self.root.children[i].visits if i in self.root.children else 0
-                for i in range(Game.num_actions)
-            ]
-        )
+        visits = np.array([
+            self.root.children[i].visits if i in self.root.children else 0
+            for i in range(Game.num_actions)
+        ])
         probs = visits / max(1, visits.sum())
         return probs, (self.root.results / self.root.results.sum())
 

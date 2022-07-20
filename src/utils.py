@@ -5,8 +5,8 @@ import numpy as np
 import tqdm
 from scipy.stats import beta
 
-from Game import Game
-from NN import NN
+from game import Game
+from nn import NN
 from config import Config
 from player import MctsPlayer, ModelPlayer, Player
 
@@ -53,9 +53,10 @@ def calculate_distribution(positive, negative) -> Tuple[float, float, float]:
     )
 
 
-def evaluate_models_against_player(
-        config: Config, player: Player, games: int, path="../models"
-):
+def evaluate_models_against_player(config: Config,
+                                   player: Player,
+                                   games: int,
+                                   path="../models"):
     files = glob.glob(f"{path}/*")
     models_results: Dict[str, List[int, int, int]] = {}
     for file_path in files:
@@ -64,16 +65,16 @@ def evaluate_models_against_player(
         models_results[file_path] = [0, 0, 0]
         models_results[file_path] = play_match(model_player, player, games)
     sorted_models = list(
-        sorted(models_results.items(), key=lambda x: x[1][-1] - x[1][1])
-    )
+        sorted(models_results.items(), key=lambda x: x[1][-1] - x[1][1]))
     for name, (t, w, l) in sorted_models:
         lb, av, ub = calculate_distribution(w + t / 2, l + t / 2)
         print(f"{name:>30}: +{w}-{l}={t}, elo: {lb:.0f} - {av:.0f} - {ub:.0f}")
 
 
-def evaluate_pure_models_against_player(
-        config: Config, player: Player, games: int, path="../models"
-):
+def evaluate_pure_models_against_player(config: Config,
+                                        player: Player,
+                                        games: int,
+                                        path="../models"):
     files = glob.glob(f"{path}/*")
     models_results: Dict[str, List[int, int, int]] = {}
     for file_path in files:
@@ -82,8 +83,7 @@ def evaluate_pure_models_against_player(
         models_results[file_path] = [0, 0, 0]
         models_results[file_path] = play_match(model_player, player, games)
     sorted_models = list(
-        sorted(models_results.items(), key=lambda x: x[1][-1] - x[1][1])
-    )
+        sorted(models_results.items(), key=lambda x: x[1][-1] - x[1][1]))
     for name, (t, w, l) in sorted_models:
         lb, av, ub = calculate_distribution(w + t / 2, l + t / 2)
         print(f"{name:>30}: +{w}-{l}={t}, elo: {lb:.0f} - {av:.0f} - {ub:.0f}")

@@ -13,10 +13,12 @@ from utils import evaluate_pure_models_against_player
 
 
 class SelfplayGenerator:
+
     def __init__(self, nn: NN, config: Config):
         self.nn = nn
         self.config = config
-        self.x = np.zeros((0, Game.board_height, Game.board_width, Game.num_layers))
+        self.x = np.zeros(
+            (0, Game.board_height, Game.board_width, Game.num_layers))
         self.y_act = np.zeros((0, Game.num_actions))
         self.y_wdl = np.zeros((0, 3))
 
@@ -27,7 +29,8 @@ class SelfplayGenerator:
 
     def generate_game(self):
         game = Game()
-        x: ndarray = np.zeros((self.config.max_moves, Game.board_height, Game.board_width, Game.num_layers))
+        x: ndarray = np.zeros((self.config.max_moves, Game.board_height,
+                               Game.board_width, Game.num_layers))
         y_act: ndarray = np.zeros((self.config.max_moves, Game.num_actions))
         y_wdl: ndarray = np.zeros((self.config.max_moves, 3))
         tree = MCTS(self.config)
@@ -35,8 +38,9 @@ class SelfplayGenerator:
         while not game.is_terminal():
             probs, wdl = tree.run(game.copy(), self.nn.policy_function)
             probs = probs * (
-                    1 - self.config.exploration_noise
-            ) + self.config.exploration_noise * np.random.dirichlet(np.ones(Game.num_actions))
+                1 - self.config.exploration_noise
+            ) + self.config.exploration_noise * np.random.dirichlet(
+                np.ones(Game.num_actions))
             legal_actions = game.get_actions()
             for a in range(Game.num_actions):
                 if not a in legal_actions:

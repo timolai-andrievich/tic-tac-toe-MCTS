@@ -10,7 +10,7 @@ from tensorflow.python.keras import Model
 from tensorflow.python.keras.layers import Dense, Conv2D, Flatten, Softmax, Input, ReLU
 from tensorflow.python.keras.losses import CategoricalCrossentropy
 
-from Game import (
+from game import (
     Game,
     Position,
     augment_data,
@@ -19,7 +19,8 @@ from config import Config
 
 
 def create_model(filters=128):
-    state_input = Input(shape=(Game.board_height, Game.board_width, Game.num_layers))
+    state_input = Input(shape=(Game.board_height, Game.board_width,
+                               Game.num_layers))
     conv1 = ReLU()(Conv2D(filters, (3, 3), padding="same")(state_input))
     conv2 = ReLU()(Conv2D(filters, (3, 3), padding="same")(conv1))
     conv3 = ReLU()(Conv2D(filters, (3, 3), padding="same")(conv2))
@@ -72,15 +73,13 @@ class NN:
             val_loss = self.loss(y_val, pred_val)
             loss = act_loss + val_loss
         gradients = tape.gradient(loss, self.model.trainable_variables)
-        self.optimizer.apply_gradients(zip(gradients, self.model.trainable_variables))
+        self.optimizer.apply_gradients(
+            zip(gradients, self.model.trainable_variables))
 
     def train(self, config: Config, batch: Tuple[ndarray, ndarray, ndarray]):
         """Trains the NN on a batch of data collected from self-play"""
         x, y_act, y_val = augment_data(*batch)
-        dataset = (
-            tf.data.Dataset.from_tensor_slices((x, y_act, y_val))
-                .shuffle(10000)
-                .batch(config.batch_size)
-        )
+        dataset = (tf.data.Dataset.from_tensor_slices(
+            (x, y_act, y_val)).shuffle(10000).batch(config.batch_size))
         for x, y_act, y_val in dataset:
             self.train_step(x, y_act, y_val)

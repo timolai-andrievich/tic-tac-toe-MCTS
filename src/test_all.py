@@ -1,9 +1,9 @@
 import numpy as np
 
 # noinspection PyUnresolvedReferences
-from Game import Game, START_POSITION, test_position, test_game
-from MCTS import Node, MCTS
-from NN import NN, create_model
+from game import Game, START_POSITION, test_position, test_game
+from mcts import Node, MCTS
+from nn import NN, create_model
 from config import Config
 
 unit_test_config = Config()
@@ -27,8 +27,9 @@ def test_nn():
     pos.vectorize()
     nn.policy_function(pos)
     batch = (
-        pos.vectorize().reshape((-1, Game.board_height, Game.board_width, Game.num_layers)), 
-        np.ones((1, Game.num_actions)) / Game.num_actions, 
+        pos.vectorize().reshape(
+            (-1, Game.board_height, Game.board_width, Game.num_layers)),
+        np.ones((1, Game.num_actions)) / Game.num_actions,
         np.array([[0, 1, 0]]),
     )
     nn.train(config, batch)
