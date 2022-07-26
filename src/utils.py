@@ -53,16 +53,15 @@ def play_match(player_1: Player,
     """
     results = [0, 0, 0]
     for i in range(games) if silent else tqdm.tqdm(range(games)):
-        if i % 2:
-            player_1, player_2 = player_2, player_1
         result = play_game(player_1, player_2)
         if i % 2:
             result = -result
         results[result] += 1
+        player_1, player_2 = player_2, player_1
     return results
 
 
-def elo_from_expected_score(expected_score: float) -> float:
+def elo_from_expected_score(expected_score: np.ndarray) -> np.ndarray:
     """Calculates relative elo rating from expecred score
     in a game in a match between two players.
 
@@ -72,12 +71,8 @@ def elo_from_expected_score(expected_score: float) -> float:
     Returns:
         float: Relative elo rating.
     """
-    expected_score = max(1e-20, min(1 - 1e-20), expected_score)
+    expected_score = np.clip(expected_score, 1e-20, 1 - 1e-20)
     return -400 * np.log10(1 / expected_score - 1)
-
-
-# Prepare function for use on numpy arrays
-elo_from_expected_score = np.vectorize(elo_from_expected_score)
 
 
 def calculate_distribution(positive: float,
