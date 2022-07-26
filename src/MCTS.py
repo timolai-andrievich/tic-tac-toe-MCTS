@@ -1,3 +1,5 @@
+"""Contains classes related to Monte-Carlo Tree Search
+"""
 from typing import Tuple, Dict, List
 import math
 

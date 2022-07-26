@@ -1,3 +1,5 @@
+"""Contains classes related to neural networks used for position evaluation
+"""
 import time
 from typing import Tuple
 
