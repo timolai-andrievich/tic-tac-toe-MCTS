@@ -127,6 +127,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# IDEs and folders with models
 .idea/
 models/
 models-archive/
+.vscode/
