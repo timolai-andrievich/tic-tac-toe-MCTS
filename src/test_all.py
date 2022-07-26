@@ -2,7 +2,7 @@
 """
 import numpy as np
 
-from game import Game, test_game, test_position, START_POSITION # pylint: disable=unused-import
+from game import Game, test_game, test_position, START_POSITION  # pylint: disable=unused-import
 import mcts
 import policy
 from config import Config
@@ -32,8 +32,8 @@ def test_nn():
     pos.get_state()
     model.policy_function(pos)
     batch = (
-        pos.get_state().reshape((-1, Game.board_height,
-                                 Game.board_width, Game.num_layers)),
+        pos.get_state().reshape(
+            (-1, Game.board_height, Game.board_width, Game.num_layers)),
         np.ones((1, Game.num_actions)) / Game.num_actions,
         np.array([[0, 1, 0]]),
     )
