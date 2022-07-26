@@ -75,7 +75,7 @@ class SelfplayGenerator:
             probs = np.power(probs, 1 / self.config.temp)
             probs = probs / probs.sum()
             action = np.random.choice(Game.num_actions, p=probs)
-            states[current_move] = game.position.vectorize()
+            states[current_move] = game.position.get_state()
             y_act[current_move] = probs
             y_wdl[current_move] = wdl
             current_move += 1
