@@ -8,7 +8,7 @@ from numpy import ndarray
 
 from game import Game
 from mcts import MCTS
-from model import Model
+from policy import Model
 from config import Config
 from player import RandomPlayer
 from utils import evaluate_pure_models_against_player

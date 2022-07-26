@@ -7,7 +7,7 @@ import numpy as np
 
 from game import Game
 from mcts import MCTS
-from model import Model
+from policy import Model
 from config import Config
 
 

@@ -6,7 +6,7 @@ import tqdm
 from scipy.stats import beta
 
 from game import Game
-from model import Model
+from policy import Model
 from config import Config
 from player import MctsPlayer, ModelPlayer, Player
 
