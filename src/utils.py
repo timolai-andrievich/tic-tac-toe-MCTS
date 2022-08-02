@@ -112,7 +112,7 @@ def evaluate_models_against_player(config: Config,
         path (str, optional): Path to folder with model weights. Defaults to "../models".
     """
     models_results: Dict[str, List[int, int, int]] = {}
-    for file_path in glob.glob(f"{path}/*"):
+    for file_path in glob.glob(f"{path}/*/checkpoint"):
         model = Model(config, file_path=file_path)
         model_player = MctsPlayer(model, config)
         models_results[file_path] = [0, 0, 0]
@@ -142,7 +142,7 @@ def evaluate_pure_models_against_player(config: Config,
         path (str, optional): Path to folder with model weights. Defaults to "../models".
     """
     models_results: Dict[str, List[int, int, int]] = {}
-    for file_path in glob.glob(f"{path}/*"):
+    for file_path in glob.glob(f"{path}/*/checkpoint"):
         model = Model(config, file_path=file_path)
         model_player = ModelPlayer(model)
         models_results[file_path] = [0, 0, 0]

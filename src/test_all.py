@@ -39,7 +39,7 @@ def test_nn():
     )
     model.train(config, batch)
     act, val = model.policy_function(pos)
-    model.save(file_name="../models/test")
+    model.save(file_path="../models/test")
     model = policy.Model(config, file_path="../models/test")
     new_act, new_val = model.policy_function(pos)
     assert (act - new_act).sum() < 1e-3

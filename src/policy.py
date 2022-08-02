@@ -8,7 +8,7 @@ import tensorflow as tf
 from numpy import ndarray
 from tensorflow.keras.optimizers import Adam  # Tensorflow is using lazy loaders pylint: disable=import-error disable=no-name-in-module
 from tensorflow.python import keras  # pylint: disable=import-error disable=no-name-in-module
-from tensorflow.python.keras import layers  # pylint: disable=import-error disable=no-name-in-module
+from tensorflow.keras import layers  # pylint: disable=import-error disable=no-name-in-module
 from tensorflow.python.keras.losses import CategoricalCrossentropy  # pylint: disable=import-error disable=no-name-in-module
 
 from game import (
@@ -33,11 +33,12 @@ def conv_layer(inputs: tf.Tensor, filters: int, name: str) -> tf.Tensor:
     flow = inputs
     flow = layers.Conv2D(filters, (3, 3), padding="same",
                          name=f'{name}/conv')(flow)
+    flow = layers.BatchNormalization(name=f'{name}/norm')(flow)
     flow = layers.ReLU(name=f'{name}/relu')(flow)
     return flow
 
 
-def create_model(filters=128):
+def create_model(filters=128) -> keras.Model:
     """Builds the neural network
 
     Args:
@@ -73,20 +74,18 @@ def create_model(filters=128):
     model.build(input_shape=(None, Game.board_height, Game.board_width,
                              Game.num_layers))
     model.compile()
-    model.summary()
     return model
 
 
 class Model:
     """A wrapper for the network"""
 
-    def __init__(self, config: Config, file_path=None):
+    def __init__(self, config: Config, file_path: str = None):
         self.loss = CategoricalCrossentropy()
         self.optimizer = Adam(config.learning_rate)
-        if file_path is None:
-            self.model = create_model()
-        else:
-            self.model = tf.keras.models.load_model(file_path)
+        self.model = create_model()
+        if file_path:
+            self.model.load_weights(file_path)
 
     def update_config(self, config: Config):
         """Updates current model parameters from the config provided.
@@ -96,36 +95,40 @@ class Model:
         """
         self.optimizer.learning_rate = config.learning_rate
 
-    def policy_function(self, position: Position) -> Tuple[ndarray, ndarray]:
+    def policy_function(self,
+                        position: Position,
+                        training: bool = True) -> Tuple[ndarray, ndarray]:
         """Evaluates the position and returns probabilities of actions and outcome probabilities.
 
         Args:
             position (Position): Position to be evaluated.
+            training (bool): Mode of model call, should be true when generating
+            self-play games, affects batch normalization.
 
         Returns:
             Tuple[ndarray, ndarray]: Action probabilities and outcome probabilities in format
             [Tie, First player wins, Second player wins].
         """
         state = position.get_state()[np.newaxis, ...]
-        act, val = self.model(state)
+        act, val = self.model(state, training=training)
         return act.numpy()[0], val.numpy()[0]
 
-    def save(self, file_name: str = None, info: str = ""):
+    def save(self, file_path: str = None, info: str = ""):
         """Saves the model's weights into a file. If no filename is provided, then
         ../models/model-%Y%m%d_%H%M%S is chosen, where %Y is current year (4 digits),
         %m - current month (2 digits), %d - current day (2 digits), %H - current hour
         (2 digits), %M - current minute (2 digits), %S - current second (2 digits).
 
         Args:
-            file_name (str, optional): The path to where the weights should be saved.
+            file_path (str, optional): The path to where the weights should be saved.
             Defaults to None.
             info (str, optional): Additional info to be added to the end of the filename.
             Defaults to empty string.
         """
-        if file_name is None:
-            file_name = (f"../models/model-{time.strftime('%Y%m%d_%H%M%S')}"
-                         f"{f'_{info}' if info else ''}")
-        self.model.save(file_name)
+        if file_path is None:
+            file_path = (f"../models/model-{time.strftime('%Y%m%d_%H%M%S')}"
+                         f"{f'_{info}' if info else ''}/checkpoint")
+        self.model.save_weights(file_path)
 
     @tf.function(reduce_retracing=True)
     def train_step(self, states: ndarray, y_act: ndarray, y_val: ndarray):
