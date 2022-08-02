@@ -19,6 +19,24 @@ from game import (
 from config import Config
 
 
+def conv_layer(inputs: tf.Tensor, filters: int, name: str) -> tf.Tensor:
+    """Constructs a convolutional layer with ReLU activation.
+
+    Args:
+        inputs (tf.Tensor): Input tensor.
+        filters (int): The number of layers in convolution.
+        name (str): The name of the block.
+
+    Returns:
+        tf.Tensor: The output tensor of the block.
+    """
+    flow = inputs
+    flow = layers.Conv2D(filters, (3, 3), padding="same",
+                         name=f'{name}/conv')(flow)
+    flow = layers.ReLU(name=f'{name}/relu')(flow)
+    return flow
+
+
 def create_model(filters=128):
     """Builds the neural network
 
@@ -30,25 +48,32 @@ def create_model(filters=128):
     """
     state_input = layers.Input(shape=(Game.board_height, Game.board_width,
                                       Game.num_layers))
-    conv1 = layers.ReLU()(layers.Conv2D(filters, (3, 3),
-                                        padding="same")(state_input))
-    conv2 = layers.ReLU()(layers.Conv2D(filters, (3, 3), padding="same")(conv1))
-    conv3 = layers.ReLU()(layers.Conv2D(filters, (3, 3), padding="same")(conv2))
+    common = state_input
+    common = conv_layer(common, filters, 'common/1')
+    common = conv_layer(common, filters, 'common/2')
+    common = conv_layer(common, filters, 'common/3')
 
-    pol1 = layers.ReLU()(layers.Conv2D(32, (3, 3), padding="same",
-                                       name="pol1")(conv3))
-    pol2 = layers.Flatten()(pol1)
-    pol3 = layers.ReLU()(layers.Dense(128, name="pol3")(pol2))
-    pol = layers.Softmax()(layers.Dense(Game.num_actions,
-                                        name="pol_final")(pol3))
+    pol = common
+    pol = conv_layer(pol, 1, name="pol/conv")
+    pol = layers.Flatten(name='pol/flat')(pol)
+    pol = layers.ReLU(name='pol/dense/flatten')(layers.Dense(
+        128, name="pol/dense")(pol))
+    pol = layers.Softmax(name='pol/softmax')(layers.Dense(
+        Game.num_actions, name="pol/final/dense")(pol))
 
-    val1 = layers.ReLU()(layers.Conv2D(32, (3, 3), padding="same")(conv3))
-    flat = layers.Flatten()(val1)
-    val2 = layers.ReLU()(layers.Dense(128)(flat))
-    val = layers.Softmax()(layers.Dense(3)(val2))
+    val = common
+    val = conv_layer(val, 1, name='val.conv')
+    val = layers.Flatten(name='val/flatten')(val)
+    val = layers.ReLU(name='val/dense/relu')(layers.Dense(
+        128, name='val/dense')(val))
+    val = layers.Softmax(name='val/final/softmax')(layers.Dense(
+        3, name='val/final/dense')(val))
 
     model = keras.Model(state_input, [pol, val])
+    model.build(input_shape=(None, Game.board_height, Game.board_width,
+                             Game.num_layers))
     model.compile()
+    model.summary()
     return model
 
 

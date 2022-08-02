@@ -137,7 +137,7 @@ def main():
     model = train(model, config)
     model.save()
     random_player = RandomPlayer()
-    evaluate_pure_models_against_player(config, random_player, 10000)
+    evaluate_pure_models_against_player(config, random_player, 1000)
 
 
 if __name__ == "__main__":
