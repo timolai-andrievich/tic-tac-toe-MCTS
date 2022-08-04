@@ -42,7 +42,7 @@ class Position:
         """
         return 1 if (self.board != 0).sum() % 2 == 0 else -1
 
-    def get_winner(self) -> int: # pylint: disable=too-many-branches
+    def get_winner(self) -> int:  # pylint: disable=too-many-branches
         """Returns the integer according to the result of the game.
         1 if the first pleyer won,
         0 if the game is tied,
