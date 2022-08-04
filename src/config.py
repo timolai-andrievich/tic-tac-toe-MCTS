@@ -1,7 +1,9 @@
 """Describes configuration class, containing parameters
 for neural networks and Monte-Carlo Tree Search.
 """
-class Config: # pylint: disable=too-few-public-methods
+
+
+class Config:  # pylint: disable=too-few-public-methods
     """Class that contains hyperparameters for the neural network
     """
     # Training-related parameters
