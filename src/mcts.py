@@ -9,7 +9,7 @@ import numpy as np
 from config import Config
 from game import Game
 
-probs_to_eval = np.array([0, 1, -1])
+probs_to_eval = np.array([1, 0, -1])
 
 
 class Node:
@@ -24,7 +24,7 @@ class Node:
             prior (float)
             current_move (int): The player that is to move
             from the position represented by the node.
-            config (Config): _description_
+            config (Config): Config object with parameters for MCTS.
         """
         self.config = config
         self.current_move: int = current_move
@@ -94,8 +94,7 @@ class Node:
         Returns:
             float: UCB value of the node.
         """
-        return self.avg(
-        ) * self.current_move * -1 + self.config.c_impact * self.prior * math.sqrt(
+        return self.avg() * -1 + self.config.c_impact * self.prior * math.sqrt(
             self.parent.visits) / (1 + self.visits)
 
     def update(self, new_score: ndarray):
@@ -115,7 +114,7 @@ class Node:
         """
         self.update(new_score)
         if not self.is_root():
-            self.parent.update_recursive(new_score)
+            self.parent.update_recursive(new_score[::-1])
 
 
 class MCTS:
@@ -172,9 +171,7 @@ class MCTS:
             probs, new_value = policy_function(game.position)
             node.expand(game, probs)
         else:
-            winner = game.get_winner()
-            new_value = np.zeros(3)
-            new_value[winner] = 1
+            new_value = game.get_wdl()
         # Backpropagade the result
         node.update_recursive(new_value)
 

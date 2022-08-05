@@ -8,7 +8,7 @@ from numpy import ndarray
 NUM_ACTIONS = 9
 BOARD_WIDTH = 3
 BOARD_HEIGHT = 3
-NUM_LAYERS = 4
+NUM_LAYERS = 3
 IN_ROW = 3  # Number of symbols placed in a row required to win
 Image = str
 
@@ -98,14 +98,13 @@ class Position:
             np.ndarray: Representation of the board.
         """
         result = np.zeros((BOARD_HEIGHT, BOARD_WIDTH, NUM_LAYERS))
-        for (i, j), cell_value in np.ndenumerate(self.board):
+        board = self.board * self.get_current_move()
+        for (i, j), cell_value in np.ndenumerate(board):
             if cell_value == 1:
                 result[i, j, 0] = 1
             elif cell_value == -1:
                 result[i, j, 1] = 1
-        result[:, :, 2] = self.get_current_move()
-        result[:, :, 3] = np.array(self.board).reshape(
-            (BOARD_HEIGHT, BOARD_WIDTH))
+        result[:, :, 2] = np.array(board).reshape((BOARD_HEIGHT, BOARD_WIDTH))
         return result
 
     def copy(self):
@@ -224,6 +223,17 @@ class Game:
             raise IndexError(f"The {action}-th cell is already taken")
         self.position.board.reshape(-1)[action] = self.get_current_move()
 
+    def get_wdl(self) -> np.ndarray:
+        """If the game is finished, return result in Win/Draw/Lose format.
+
+        Returns:
+            ndarray: The result of the game.
+        """
+        assert self.is_finished()
+        if self.get_winner() == 0:
+            return np.array([0, 1, 0])
+        return np.array([0, 0, 1])
+
 
 def augment_data(source_tensor: ndarray, y_act: ndarray,
                  y_val: ndarray) -> Tuple[ndarray, ndarray, ndarray]:
@@ -238,9 +248,11 @@ def augment_data(source_tensor: ndarray, y_act: ndarray,
         Tuple[ndarray, ndarray, ndarray]: Augmented `(source_tensor, y_act, y_val)`
     """
     batch_size = source_tensor.shape[0]
-    y_act = y_act.reshape((-1, 3, 3))
-    result_x: ndarray = np.zeros((batch_size * 4, 3, 3, 4))
-    result_y: ndarray = np.zeros((batch_size * 4, 3, 3))
+    y_act = y_act.reshape((-1, Game.board_height, Game.board_width))
+    result_x: ndarray = np.zeros(
+        (batch_size * 4, Game.board_height, Game.board_width, Game.num_layers))
+    result_y: ndarray = np.zeros(
+        (batch_size * 4, Game.board_height, Game.board_width))
     result_y_val: ndarray = np.zeros((batch_size * 4, 3))
 
     result_x[:batch_size] = source_tensor

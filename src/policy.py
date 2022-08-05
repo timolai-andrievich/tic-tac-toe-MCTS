@@ -103,7 +103,7 @@ class Model:
 
         Returns:
             Tuple[ndarray, ndarray]: Action probabilities and outcome probabilities in format
-            [Tie, First player wins, Second player wins].
+            [Win, Draw, Lose].
         """
         state = position.get_state()[np.newaxis, ...]
         act, val = self.model(state)
