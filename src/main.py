@@ -105,8 +105,8 @@ def train(model: Model, config: Config, checkpoints=False) -> Model:
         generator = SelfplayGenerator(model, config)
         training_data = generator.generate_games(config.games_in_iteration)
         model.train(config, training_data)
-        if checkpoints and i > 0 and i % config.checkpoints == 0:
-            model.save(info=f"iteration_{i}")
+        if checkpoints and i % config.checkpoints == 0:
+            model.save(info=f"iteration_{i + 1}")
         config.exploration_noise *= config.exploration_decay
         if config.exploration_noise < config.min_exploration_noise:
             config.exploration_noise = config.min_exploration_noise
@@ -120,24 +120,15 @@ def main():
     config.learning_rate = 2e-3
     config.games_in_iteration = 50
     config.mcts_playout = 20
-    config.iteration_count = 30
+    config.iteration_count = 20
     config.starting_exploration_noise = 0.5
     config.min_exploration_noise = 0.1
     config.exploration_decay = 0.95
     model = Model(config)
     model = train(model, config)
-    config.starting_exploration_noise = 0.25
-    config.learning_rate = 2e-4
-    config.iteration_count = 30
-    model = train(model, config)
-    config.starting_exploration_noise = 0.15
-    config.min_exploration_noise = 0.01
-    config.learning_rate = 2e-5
-    config.iteration_count = 10
-    model = train(model, config)
     model.save()
     random_player = RandomPlayer()
-    evaluate_pure_models_against_player(config, random_player, 10000)
+    evaluate_pure_models_against_player(config, random_player, 100)
 
 
 if __name__ == "__main__":

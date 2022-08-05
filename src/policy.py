@@ -37,7 +37,7 @@ def conv_layer(inputs: tf.Tensor, filters: int, name: str) -> tf.Tensor:
     return flow
 
 
-def create_model(filters=128) -> keras.Model:
+def create_model(filters=32) -> keras.Model:
     """Builds the neural network
 
     Args:
@@ -54,15 +54,15 @@ def create_model(filters=128) -> keras.Model:
     common = conv_layer(common, filters, 'common/3')
 
     pol = common
-    pol = conv_layer(pol, 8, name="pol/conv")
+    pol = conv_layer(pol, 16, name="pol/conv")
     pol = layers.Flatten(name='pol/flat')(pol)
     pol = layers.ReLU(name='pol/dense/flatten')(layers.Dense(
         128, name="pol/dense")(pol))
-    pol = layers.Softmax(name='pol/softmax')(layers.Dense(
+    pol = layers.Softmax(name='pol/final/softmax')(layers.Dense(
         Game.num_actions, name="pol/final/dense")(pol))
 
     val = common
-    val = conv_layer(val, 8, name='val.conv')
+    val = conv_layer(val, 16, name='val.conv')
     val = layers.Flatten(name='val/flatten')(val)
     val = layers.ReLU(name='val/dense/relu')(layers.Dense(
         128, name='val/dense')(val))

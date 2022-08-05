@@ -125,6 +125,7 @@ def evaluate_models_against_player(config: Config,
             f"{name:>30}: +{wins}-{loses}={ties}, "
             f"elo: {lower_bound:.0f} - {expected_rating:.0f} - {upper_bound:.0f}"
         )
+    return models_results
 
 
 def evaluate_pure_models_against_player(config: Config,
@@ -155,3 +156,4 @@ def evaluate_pure_models_against_player(config: Config,
             f"{name:>30}: +{wins}-{loses}={ties}, "
             f"elo: {lower_bound:.0f} - {expected_rating:.0f} - {upper_bound:.0f}"
         )
+    return models_results
