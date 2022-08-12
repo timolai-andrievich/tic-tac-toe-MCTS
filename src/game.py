@@ -86,7 +86,7 @@ class Position:
                     res = 1
                 elif (board_slice == -1).all():
                     res = -1
-        if (self.board != 0).all():
+        if res == 2 and (self.board != 0).all():
             res = 0
         return res
 
