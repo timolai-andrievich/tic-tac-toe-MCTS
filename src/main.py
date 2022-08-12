@@ -118,13 +118,15 @@ def main():
     """
     config = Config()
     config.learning_rate = 2e-3
-    config.games_in_iteration = 50
+    config.games_in_iteration = 25
     config.mcts_playout = 20
     config.iteration_count = 20
     config.starting_exploration_noise = 0.5
     config.min_exploration_noise = 0.1
     config.exploration_decay = 0.95
     model = Model(config)
+    model = train(model, config)
+    config.learning_rate = 2e-4
     model = train(model, config)
     model.save()
     random_player = RandomPlayer()

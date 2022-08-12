@@ -275,7 +275,7 @@ def augment_data(source_tensor: ndarray, y_act: ndarray,
     result_y[batch_size * 3:] = np.rot90(y_act, k=3, axes=(1, 2))
     result_y_val[batch_size * 3:] = y_val
 
-    return result_x, result_y.reshape((-1, 9)), result_y_val
+    return result_x, result_y.reshape((-1, Game.num_actions)), result_y_val
 
 
 def test_position():
