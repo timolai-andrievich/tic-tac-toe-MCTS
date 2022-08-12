@@ -1,6 +1,9 @@
 """Entry point of the program.
 """
 from typing import Tuple
+import os
+import os.path
+import time
 
 import numpy as np
 import tqdm
@@ -12,6 +15,8 @@ from policy import Model
 from config import Config
 from player import RandomPlayer
 from utils import evaluate_pure_models_against_player
+
+required_folders = ['../models', '../games']
 
 
 class SelfplayGenerator:
@@ -25,12 +30,15 @@ class SelfplayGenerator:
             model (Model): Model to generate games with.
             config (Config): Parameters used for generation.
         """
+        self.game_idx = 0
         self.model = model
         self.config = config
         self.state_tensor = np.zeros(
             (0, Game.board_height, Game.board_width, Game.num_layers))
         self.y_act = np.zeros((0, Game.num_actions))
         self.y_wdl = np.zeros((0, 3))
+        self.games_path = f"../games/{time.strftime('%Y%m%d_%H%M%S')}"
+        os.mkdir(self.games_path)
 
     def generate_games(self, count: int) -> Tuple[ndarray, ndarray, ndarray]:
         """Generates games through self-play, and returns the data about generated games.
@@ -42,7 +50,7 @@ class SelfplayGenerator:
             Tuple[ndarray, ndarray, ndarray]: Returns tensors with game states,
             action probabilities, and outcome probabilities
         """
-        for _ in range(count):
+        for self.game_idx in range(count):
             self.generate_game()
         return self.state_tensor, self.y_act, self.y_wdl
 
@@ -60,6 +68,11 @@ class SelfplayGenerator:
         while not game.is_finished() and current_move < self.config.max_moves:
             # Get action and outcome probabilities using MCTS
             probs, wdl = tree.run(game.copy(), self.model.policy_function)
+            # Apply temperature hyperparameter to the action probabilities
+            probs = np.power(probs, 1 / self.config.temp)
+            probs = probs / probs.sum()
+            # Save probabilities to model training
+            pure_probs = probs.copy()
             # Add exploration noise to the actions
             probs = probs * (
                 1 - self.config.exploration_noise
@@ -70,17 +83,19 @@ class SelfplayGenerator:
             for action in range(Game.num_actions):
                 if not action in legal_actions:
                     probs[action] = 0
-            # Apply temperature hyperparameter to the action probabilities
-            probs = probs / probs.sum()
-            probs = np.power(probs, 1 / self.config.temp)
             probs = probs / probs.sum()
             action = np.random.choice(Game.num_actions, p=probs)
             states[current_move] = game.position.get_state()
-            y_act[current_move] = probs
+            y_act[current_move] = pure_probs
             y_wdl[current_move] = wdl
             current_move += 1
             game.commit_action(action)
             tree.commit_action(action)
+        path = f"{self.games_path}/{time.strftime('%Y%m%d_%H%M%S')}_{self.game_idx}"
+        os.mkdir(path)
+        np.save(f'{path}/states.npy', states[:current_move])
+        np.save(f'{path}/act.npy', y_act[:current_move])
+        np.save(f'{path}/wdl.npy', y_wdl[:current_move])
         self.state_tensor = np.append(self.state_tensor,
                                       states[:current_move],
                                       axis=0)
@@ -116,17 +131,18 @@ def train(model: Model, config: Config, checkpoints=False) -> Model:
 def main():
     """The entry function of the application.
     """
+    for path in required_folders:
+        if not os.path.exists(path):
+            os.mkdir(path)
     config = Config()
     config.learning_rate = 2e-3
     config.games_in_iteration = 25
     config.mcts_playout = 20
-    config.iteration_count = 20
+    config.iteration_count = 40
     config.starting_exploration_noise = 0.5
     config.min_exploration_noise = 0.1
     config.exploration_decay = 0.95
     model = Model(config)
-    model = train(model, config)
-    config.learning_rate = 2e-4
     model = train(model, config)
     model.save()
     random_player = RandomPlayer()

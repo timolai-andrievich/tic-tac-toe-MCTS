@@ -132,4 +132,5 @@ dmypy.json
 .idea/
 models/
 models-archive/
+games/
 .vscode/
