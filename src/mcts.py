@@ -16,7 +16,7 @@ class Node:
     """Represents the node of the game tree.
     """
 
-    def __init__(self, parent, prior: float, current_move: int, config: Config):
+    def __init__(self, parent, prior: float, config: Config):
         """Represents the node of the game tree
 
         Args:
@@ -27,7 +27,6 @@ class Node:
             config (Config): Config object with parameters for MCTS.
         """
         self.config = config
-        self.current_move: int = current_move
         self.parent: Node = parent
         self.prior: float = prior
         self.children: Dict[int, Node] = {}
@@ -69,8 +68,7 @@ class Node:
         legal_actions = game.get_actions()
         action_probs = action_probs.reshape(Game.num_actions)
         for i in legal_actions:
-            self.children[i] = Node(self, action_probs[i],
-                                    self.current_move * -1, self.config)
+            self.children[i] = Node(self, action_probs[i], self.config)
 
     def is_leaf(self) -> bool:
         """Retruns True if a node is a leaf, False otherwise.
@@ -128,7 +126,7 @@ class MCTS:
             config (Config): Parameters for MCTS.
         """
         self.config = config
-        self.root = Node(None, 0, 1, self.config)
+        self.root = Node(None, 0, self.config)
 
     def run(self, game: Game, policy_function) -> Tuple[ndarray, ndarray]:
         """Runs the MCTS and returns probabilities of actions and outcomes.
@@ -177,13 +175,13 @@ class MCTS:
 
     def commit_action(self, action: int):
         """Makes a node corresponding to the given action the root of the tree
-        and discard all the other nodes.
+        and discards all the other nodes.
 
         Args:
             action (int): Action ID.
         """
         if action not in self.root.children:
-            self.root = Node(None, 0, self.root.current_move * -1, self.config)
+            self.root = Node(None, 0, self.config)
         else:
             self.root = self.root.children[action]
         self.root.parent = None
