@@ -112,6 +112,21 @@ def calculate_distribution(
         elo_from_expected_score(upper_bound),
     )
 
+def print_results_table(table: Dict[str, Tuple[int, int, int]]):
+    """Prints the results table to the standart output.
+
+    Args:
+        table (Dict[str, Tuple[int, int, int]]): Results table,
+        represented as a dictionary in (name / ties, wins, losses) format.
+    """
+    for name, (ties, wins, loses) in sorted(table.items(),
+                                            key=lambda x: x[1][-1] - x[1][1]):
+        lower_bound, expected_rating, upper_bound = (calculate_distribution(
+            wins + ties / 2, loses + ties / 2))
+        print(
+            f"{name:>30}: +{wins}-{loses}={ties}, "
+            f"elo: {lower_bound:6.0f} - {expected_rating:6.0f} - {upper_bound:6.0f}"
+        )
 
 def evaluate_models_against_player(config: Config,
                                    player: Player,
@@ -133,14 +148,7 @@ def evaluate_models_against_player(config: Config,
         model_player = MctsPlayer(model, config)
         models_results[file_path] = [0, 0, 0]
         models_results[file_path] = play_match(model_player, player, games)
-    for name, (ties, wins, loses) in sorted(models_results.items(),
-                                            key=lambda x: x[1][-1] - x[1][1]):
-        lower_bound, expected_rating, upper_bound = (calculate_distribution(
-            wins + ties / 2, loses + ties / 2))
-        print(
-            f"{name:>30}: +{wins}-{loses}={ties}, "
-            f"elo: {lower_bound:.0f} - {expected_rating:.0f} - {upper_bound:.0f}"
-        )
+    print_results_table(models_results)
     return models_results
 
 
@@ -164,12 +172,5 @@ def evaluate_pure_models_against_player(config: Config,
         model_player = ModelPlayer(model)
         models_results[file_path] = [0, 0, 0]
         models_results[file_path] = play_match(model_player, player, games)
-    for name, (ties, wins, loses) in sorted(models_results.items(),
-                                            key=lambda x: x[1][-1] - x[1][1]):
-        lower_bound, expected_rating, upper_bound = (calculate_distribution(
-            wins + ties / 2, loses + ties / 2))
-        print(
-            f"{name:>30}: +{wins}-{loses}={ties}, "
-            f"elo: {lower_bound:.0f} - {expected_rating:.0f} - {upper_bound:.0f}"
-        )
+    print_results_table(models_results)
     return models_results
