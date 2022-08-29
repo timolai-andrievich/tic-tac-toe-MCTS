@@ -75,21 +75,36 @@ def elo_from_expected_score(expected_score: np.ndarray) -> np.ndarray:
     return -400 * np.log10(1 / expected_score - 1)
 
 
-def calculate_distribution(positive: float,
-                           negative: float) -> Tuple[float, float, float]:
+def calculate_distribution(
+        positive: float,
+        negative: float,
+        probability: float = .95) -> Tuple[float, float, float]:
     """Calculates lower and upper bounds for elo rating using beta distribution.
-    Bounds are chosen using standard deviation.
+    Bounds are chosen such that the probability of elo being within the returned
+    range is `probability`.
 
     Args:
         positive (float): Number of positive outcomes (such as wins).
         negative (float): Number of negative outcomes (such as losses).
+        probability (float): The probability of true elo being within returned range.
 
     Returns:
         Tuple[float, float, float]: (Lower rating bound, Expected rating, Upper rating bound).
     """
     dist = beta(positive, negative)
-    upper_bound = positive / (positive + negative) + dist.std()
-    lower_bound = positive / (positive + negative) - dist.std()
+
+    def binsearch(target: float, eps: float = 1e-6):
+        low, high = 0, 1
+        while high - low > eps:
+            middle = (high + low) / 2
+            if dist.cdf(middle) > target:
+                high = middle
+            else:
+                low = middle
+        return (high + low) / 2
+
+    upper_bound = binsearch((1 + probability) / 2)
+    lower_bound = binsearch((1 - probability) / 2)
     return (
         elo_from_expected_score(lower_bound),
         elo_from_expected_score(positive / (positive + negative)),
