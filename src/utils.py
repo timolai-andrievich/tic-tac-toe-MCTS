@@ -91,6 +91,7 @@ def calculate_distribution(
     Returns:
         Tuple[float, float, float]: (Lower rating bound, Expected rating, Upper rating bound).
     """
+    assert(0 < probability < 1)
     dist = beta(positive, negative)
 
     def binsearch(target: float, eps: float = 1e-6):
