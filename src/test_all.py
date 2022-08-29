@@ -49,7 +49,7 @@ def test_nn():
 def test_node():
     """Runs unit tests on a mcts.Node class.
     """
-    root = mcts.Node(None, 0, 1, unit_test_config)
+    root = mcts.Node(None, 0, unit_test_config)
     game = Game()
     probs = np.ones(Game.num_actions) / Game.num_actions
     assert root.is_leaf()
