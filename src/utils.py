@@ -75,27 +75,58 @@ def elo_from_expected_score(expected_score: np.ndarray) -> np.ndarray:
     return -400 * np.log10(1 / expected_score - 1)
 
 
-def calculate_distribution(positive: float,
-                           negative: float) -> Tuple[float, float, float]:
+def calculate_distribution(
+        positive: float,
+        negative: float,
+        probability: float = .95) -> Tuple[float, float, float]:
     """Calculates lower and upper bounds for elo rating using beta distribution.
-    Bounds are chosen using standard deviation.
+    Bounds are chosen such that the probability of elo being within the returned
+    range is `probability`.
 
     Args:
         positive (float): Number of positive outcomes (such as wins).
         negative (float): Number of negative outcomes (such as losses).
+        probability (float): The probability of true elo being within returned range.
 
     Returns:
         Tuple[float, float, float]: (Lower rating bound, Expected rating, Upper rating bound).
     """
+    assert(0 < probability < 1)
     dist = beta(positive, negative)
-    upper_bound = positive / (positive + negative) + dist.std()
-    lower_bound = positive / (positive + negative) - dist.std()
+
+    def binsearch(target: float, eps: float = 1e-6):
+        low, high = 0, 1
+        while high - low > eps:
+            middle = (high + low) / 2
+            if dist.cdf(middle) > target:
+                high = middle
+            else:
+                low = middle
+        return (high + low) / 2
+
+    upper_bound = binsearch((1 + probability) / 2)
+    lower_bound = binsearch((1 - probability) / 2)
     return (
         elo_from_expected_score(lower_bound),
         elo_from_expected_score(positive / (positive + negative)),
         elo_from_expected_score(upper_bound),
     )
 
+def print_results_table(table: Dict[str, Tuple[int, int, int]]):
+    """Prints the results table to the standart output.
+
+    Args:
+        table (Dict[str, Tuple[int, int, int]]): Results table,
+        represented as a dictionary in (name / ties, wins, losses) format.
+    """
+    for name, (ties, wins, loses) in sorted(table.items(),
+                                            key=lambda x: x[1][-1] - x[1][1]):
+        lower_bound, expected_rating, upper_bound = (calculate_distribution(
+            wins + ties / 2, loses + ties / 2))
+        print(
+            f"{name:>30}: +{wins}-{loses}={ties}, "
+            f"elo: {lower_bound:6.0f} - {expected_rating:6.0f} - {upper_bound:6.0f}"
+        )
 
 def evaluate_models_against_player(config: Config,
                                    player: Player,
@@ -117,14 +148,7 @@ def evaluate_models_against_player(config: Config,
         model_player = MctsPlayer(model, config)
         models_results[file_path] = [0, 0, 0]
         models_results[file_path] = play_match(model_player, player, games)
-    for name, (ties, wins, loses) in sorted(models_results.items(),
-                                            key=lambda x: x[1][-1] - x[1][1]):
-        lower_bound, expected_rating, upper_bound = (calculate_distribution(
-            wins + ties / 2, loses + ties / 2))
-        print(
-            f"{name:>30}: +{wins}-{loses}={ties}, "
-            f"elo: {lower_bound:.0f} - {expected_rating:.0f} - {upper_bound:.0f}"
-        )
+    print_results_table(models_results)
     return models_results
 
 
@@ -148,12 +172,5 @@ def evaluate_pure_models_against_player(config: Config,
         model_player = ModelPlayer(model)
         models_results[file_path] = [0, 0, 0]
         models_results[file_path] = play_match(model_player, player, games)
-    for name, (ties, wins, loses) in sorted(models_results.items(),
-                                            key=lambda x: x[1][-1] - x[1][1]):
-        lower_bound, expected_rating, upper_bound = (calculate_distribution(
-            wins + ties / 2, loses + ties / 2))
-        print(
-            f"{name:>30}: +{wins}-{loses}={ties}, "
-            f"elo: {lower_bound:.0f} - {expected_rating:.0f} - {upper_bound:.0f}"
-        )
+    print_results_table(models_results)
     return models_results
