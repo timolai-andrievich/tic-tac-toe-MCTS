@@ -100,16 +100,18 @@ class MctsPlayer(Player):  # pylint: disable=too-few-public-methods
     Uses neural network as a policy function.
     """
 
-    def __init__(self, model: Model, config: Config):
+    def __init__(self, model: Model, config: Config, temp: float = .1):
         """Chooses action based on Monte-Carlo Tree Search algorithm.
         Uses neural network as a policy function.
 
         Args:
             model (Model): Neural network to be used as a policy function.
             config (Config): Parameters for model and MCTS.
+            temp (float): Temperature to modify action probabilities.
         """
         self.model = model
         self.config = config
+        self.temp = temp
 
     def get_action(self, game: Game) -> int:
         """Chooses legal action using NN and MCTS.
@@ -122,7 +124,16 @@ class MctsPlayer(Player):  # pylint: disable=too-few-public-methods
         """
         tree = MCTS(self.config)
         actions, _ = tree.run(game.copy(), self.model.policy_function)
-        action = np.argmax(actions)
+        legal_actions = game.get_actions()
+        if self.temp < 1e-6:
+            action = max(legal_actions, key=lambda x: actions[x])
+        else:
+            actions = np.power(actions, 1 / self.temp)
+            for i in range(Game.num_actions):
+                if not i in legal_actions:
+                    actions[i] = 0
+            actions /= actions.sum()
+            action = np.random.choice(Game.num_actions, p=actions)
         return int(action)
 
 
@@ -130,13 +141,15 @@ class ModelPlayer(Player):  # pylint: disable=too-few-public-methods
     """Chooses action based on pure neural network evaluation, without the MCTS algorithm.
     """
 
-    def __init__(self, model: Model):
+    def __init__(self, model: Model, temp: float = .1):
         """Chooses action based on pure neural network evaluation, without the MCTS algorithm.
 
         Args:
             model (Model): Neural network to be used as a policy function.
+            temp (float): Temperature to modify action probabilities.
         """
         self.model = model
+        self.temp = temp
 
     def get_action(self, game: Game) -> int:
         """Chooses legal action using NN.
@@ -149,5 +162,13 @@ class ModelPlayer(Player):  # pylint: disable=too-few-public-methods
         """
         actions, _ = self.model.policy_function(game.position)
         legal_actions = game.get_actions()
-        action = max(legal_actions, key=lambda x: actions[x])
+        if self.temp < 1e-6:
+            action = max(legal_actions, key=lambda x: actions[x])
+        else:
+            actions = np.power(actions, 1 / self.temp)
+            for i in range(Game.num_actions):
+                if not i in legal_actions:
+                    actions[i] = 0
+            actions /= actions.sum()
+            action = np.random.choice(Game.num_actions, p=actions)
         return action

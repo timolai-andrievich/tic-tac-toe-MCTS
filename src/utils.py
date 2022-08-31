@@ -124,8 +124,8 @@ def print_results_table(table: Dict[str, Tuple[int, int, int]]):
         lower_bound, expected_rating, upper_bound = (calculate_distribution(
             wins + ties / 2, loses + ties / 2))
         print(
-            f"{name:>30}: +{wins}-{loses}={ties}, "
-            f"elo: {lower_bound:6.0f} - {expected_rating:6.0f} - {upper_bound:6.0f}"
+            f"{name:>30}: {f'+{wins}-{loses}={ties}':>15}, "
+            f"elo: {lower_bound:^6.0f} - {expected_rating:^6.0f} - {upper_bound:^6.0f}"
         )
 
 def evaluate_models_against_player(config: Config,
