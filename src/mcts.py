@@ -9,7 +9,7 @@ import numpy as np
 from config import Config
 from game import Game
 
-probs_to_eval = np.array([1, 0, -1])
+probs_to_eval = np.array([1, .5, 0])
 
 
 class Node:

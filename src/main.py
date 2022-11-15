@@ -136,13 +136,14 @@ def main():
             os.mkdir(path)
     config = Config()
     config.learning_rate = 2e-3
-    config.games_in_iteration = 25
-    config.mcts_playout = 20
+    config.games_in_iteration = 16
+    config.mcts_playout = 16
     config.iteration_count = 40
     config.starting_exploration_noise = 0.5
     config.min_exploration_noise = 0.1
     config.exploration_decay = 0.95
     model = Model(config)
+    print(f'Created model with {model.model.count_params():,} parameters.')
     model = train(model, config)
     model.save()
     random_player = RandomPlayer()

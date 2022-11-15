@@ -7,9 +7,9 @@ import numpy as np
 import tensorflow as tf
 from numpy import ndarray
 from tensorflow.keras.optimizers import Adam  # Tensorflow is using lazy loaders pylint: disable=import-error disable=no-name-in-module
-from tensorflow.python import keras  # pylint: disable=import-error disable=no-name-in-module
-from tensorflow.python.keras import layers  # pylint: disable=import-error disable=no-name-in-module
-from tensorflow.python.keras.losses import CategoricalCrossentropy  # pylint: disable=import-error disable=no-name-in-module
+from tensorflow import keras  # pylint: disable=import-error disable=no-name-in-module
+from tensorflow.keras import layers  # pylint: disable=import-error disable=no-name-in-module
+from tensorflow.keras.losses import CategoricalCrossentropy  # pylint: disable=import-error disable=no-name-in-module
 
 from game import (
     Game,
@@ -20,11 +20,11 @@ from config import Config
 
 
 def conv_layer(inputs: tf.Tensor, filters: int, name: str) -> tf.Tensor:
-    """Constructs a convolutional layer with ReLU activation.
+    """Constructs a convolutional layer with ReLU activation and batch normalization.
 
     Args:
         inputs (tf.Tensor): Input tensor.
-        filters (int): The number of layers in convolution.
+        filters (int): The number of filters in convolution.
         name (str): The name of the block.
 
     Returns:
@@ -33,11 +33,34 @@ def conv_layer(inputs: tf.Tensor, filters: int, name: str) -> tf.Tensor:
     flow = inputs
     flow = layers.Conv2D(filters, (3, 3), padding="same",
                          name=f'{name}/conv')(flow)
+    flow = layers.BatchNormalization(name=f'{name}/bn')(flow)
     flow = layers.ReLU(name=f'{name}/relu')(flow)
     return flow
 
+def residual_layer(inputs: tf.Tensor, filters: int, name: str) -> tf.Tensor:
+    """Constructs a residual layer with `filters` features.
 
-def create_model(filters=32) -> keras.Model:
+    Args:
+        inputs (tf.Tensor): Input tensor.
+        filters (int): The number of filters in convolution.
+        name (str): The name of the block.
+
+    Returns:
+        tf.Tensor: The output tensor of the block.
+    """
+    flow = inputs
+    shortcut = flow
+    flow = layers.Conv2D(filters, (3, 3), padding="same",
+                         name=f'{name}/conv1')(flow)
+    flow = layers.BatchNormalization(name=f'{name}/bn')(flow)
+    flow = layers.ReLU(name=f'{name}/relu')(flow)
+    flow = layers.Conv2D(filters, (3, 3), padding="same",
+                         name=f'{name}/conv2')(flow)
+    flow = layers.Add(name=f'{name}/add')([shortcut, flow])
+    return flow
+
+
+def create_model(filters=16) -> keras.Model:
     """Builds the neural network
 
     Args:
@@ -46,33 +69,30 @@ def create_model(filters=32) -> keras.Model:
     Returns:
         keras.Model: Compiled keras model.
     """
-    state_input = layers.Input(shape=(Game.board_height, Game.board_width,
+    inputs = layers.Input(shape=(Game.board_height, Game.board_width,
                                       Game.num_layers))
-    common = state_input
-    common = conv_layer(common, filters, 'common/1')
-    common = conv_layer(common, filters, 'common/2')
-    common = conv_layer(common, filters, 'common/3')
+    common = inputs
+    common = conv_layer(common, filters, 'common/conv')
+    common = residual_layer(common, filters, 'common/residual/1')
+    common = residual_layer(common, filters, 'common/residual/2')
 
     pol = common
-    pol = conv_layer(pol, 16, name="pol/conv")
+    pol = residual_layer(pol, filters, name="pol/residual/1")
+    pol = conv_layer(pol, 1, name='pol/conv/1')
     pol = layers.Flatten(name='pol/flat')(pol)
-    pol = layers.ReLU(name='pol/dense/flatten')(layers.Dense(
-        128, name="pol/dense")(pol))
-    pol = layers.Softmax(name='pol/final/softmax')(layers.Dense(
-        Game.num_actions, name="pol/final/dense")(pol))
+    pol = layers.Softmax(name='pol/final/softmax')(pol)
 
     val = common
-    val = conv_layer(val, 16, name='val.conv')
+    val = residual_layer(val, filters, name='val/residual/1')
     val = layers.Flatten(name='val/flatten')(val)
-    val = layers.ReLU(name='val/dense/relu')(layers.Dense(
-        128, name='val/dense')(val))
-    val = layers.Softmax(name='val/final/softmax')(layers.Dense(
-        3, name='val/final/dense')(val))
+    val = layers.Dense(128, name='val/dense')(val)
+    val = layers.ReLU(name='val/dense/relu')(val)
+    val = layers.Dense(3, name='val/final/dense')(val)
+    val = layers.Softmax(name='val/final/softmax')(val)
 
-    model = keras.Model(state_input, [pol, val])
+    model = keras.Model(inputs, [pol, val])
     model.build(input_shape=(None, Game.board_height, Game.board_width,
                              Game.num_layers))
-    model.compile()
     return model
 
 
