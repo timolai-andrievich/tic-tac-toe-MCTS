@@ -9,7 +9,7 @@ import numpy as np
 from config import Config
 from game import Game
 
-probs_to_eval = np.array([1, 0, -1])
+probs_to_eval = np.array([1, .5, 0])
 
 
 class Node:
@@ -76,7 +76,7 @@ class Node:
         Returns:
             bool: The result of the function.
         """
-        return self.children == {}
+        return not self.children
 
     def is_root(self) -> bool:
         """Returns True if the node is the root of the tree, False otherwise.
