@@ -4,7 +4,7 @@ import time
 from typing import Tuple
 
 import numpy as np
-import tensorflow as tf
+import tensorflow as tf  # pylint: disable=import-error disable=no-name-in-module
 from numpy import ndarray
 from tensorflow.keras.optimizers import Adam  # Tensorflow is using lazy loaders pylint: disable=import-error disable=no-name-in-module
 from tensorflow import keras  # pylint: disable=import-error disable=no-name-in-module
@@ -36,6 +36,7 @@ def conv_layer(inputs: tf.Tensor, filters: int, name: str) -> tf.Tensor:
     flow = layers.BatchNormalization(name=f'{name}/bn')(flow)
     flow = layers.ReLU(name=f'{name}/relu')(flow)
     return flow
+
 
 def residual_layer(inputs: tf.Tensor, filters: int, name: str) -> tf.Tensor:
     """Constructs a residual layer with `filters` features.
@@ -70,7 +71,7 @@ def create_model(filters=16) -> keras.Model:
         keras.Model: Compiled keras model.
     """
     inputs = layers.Input(shape=(Game.board_height, Game.board_width,
-                                      Game.num_layers))
+                                 Game.num_layers))
     common = inputs
     common = conv_layer(common, filters, 'common/conv')
     common = residual_layer(common, filters, 'common/residual/1')

@@ -91,7 +91,7 @@ def calculate_distribution(
     Returns:
         Tuple[float, float, float]: (Lower rating bound, Expected rating, Upper rating bound).
     """
-    assert(0 < probability < 1)
+    assert 0 < probability < 1
     dist = beta(positive, negative)
 
     def binsearch(target: float, eps: float = 1e-6):
@@ -112,6 +112,7 @@ def calculate_distribution(
         elo_from_expected_score(upper_bound),
     )
 
+
 def print_results_table(table: Dict[str, Tuple[int, int, int]]):
     """Prints the results table to the standart output.
 
@@ -127,6 +128,7 @@ def print_results_table(table: Dict[str, Tuple[int, int, int]]):
             f"{name:>30}: {f'+{wins}-{loses}={ties}':>15}, "
             f"elo: {lower_bound:^6.0f} - {expected_rating:^6.0f} - {upper_bound:^6.0f}"
         )
+
 
 def evaluate_models_against_player(config: Config,
                                    player: Player,

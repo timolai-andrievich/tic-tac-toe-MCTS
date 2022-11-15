@@ -76,7 +76,7 @@ class Node:
         Returns:
             bool: The result of the function.
         """
-        return self.children == {}
+        return not self.children
 
     def is_root(self) -> bool:
         """Returns True if the node is the root of the tree, False otherwise.
