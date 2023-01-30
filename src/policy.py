@@ -144,7 +144,7 @@ class Model:
         """
         if file_name is None:
             file_name = (f"../models/model-{time.strftime('%Y%m%d_%H%M%S')}"
-                         f"{f'_{info}' if info else ''}")
+                         f"{f'_{info}' if info else ''}.h5")
         self.model.save(file_name)
 
     @tf.function(reduce_retracing=True)

@@ -1,6 +1,6 @@
 """Entry point of the program.
 """
-from typing import Tuple
+from typing import Tuple, Optional
 import os
 import os.path
 import time
@@ -33,35 +33,36 @@ class SelfplayGenerator:
         self.game_idx = 0
         self.model = model
         self.config = config
-        self.state_tensor = np.zeros(
+        self.states = np.zeros(
             (0, Game.board_height, Game.board_width, Game.num_layers))
-        self.y_act = np.zeros((0, Game.num_actions))
-        self.y_wdl = np.zeros((0, 3))
+        self.actions = np.zeros((0, Game.num_actions))
+        self.wdl = np.zeros((0, 3))
         self.games_path = f"../games/{time.strftime('%Y%m%d_%H%M%S')}"
         os.mkdir(self.games_path)
 
-    def generate_games(self, count: int) -> Tuple[ndarray, ndarray, ndarray]:
-        """Generates games through self-play, and returns the data about generated games.
+    def generate_games(self, count: int):
+        """Generates `count` games through self-play, and adds them to the internal buffer.
 
         Args:
             count (int): The amount to games to play.
-
-        Returns:
-            Tuple[ndarray, ndarray, ndarray]: Returns tensors with game states,
-            action probabilities, and outcome probabilities
         """
         for self.game_idx in range(count):
             self.generate_game()
-        return self.state_tensor, self.y_act, self.y_wdl
+        if len(self.states) > self.config.buffer_size:
+            mask = np.ones(len(self.states), np.bool8)
+            mask[:-self.config.buffer_size] = 0
+            self.states = self.states[mask]
+            self.actions = self.actions[mask]
+            self.wdl = self.wdl[mask]
 
     def generate_game(self):
         """Generates a game and adds it to the class attributes.
         """
         game = Game()
-        states: ndarray = np.zeros((self.config.max_moves, Game.board_height,
+        current_game_states: ndarray = np.zeros((self.config.max_moves, Game.board_height,
                                     Game.board_width, Game.num_layers))
-        y_act: ndarray = np.zeros((self.config.max_moves, Game.num_actions))
-        y_wdl: ndarray = np.zeros((self.config.max_moves, 3))
+        current_game_actions: ndarray = np.zeros((self.config.max_moves, Game.num_actions))
+        current_game_wdl: ndarray = np.zeros((self.config.max_moves, 3))
         # Initialize Monte-Carlo Tree Search
         tree = MCTS(self.config)
         current_move = 0
@@ -85,22 +86,38 @@ class SelfplayGenerator:
                     probs[action] = 0
             probs = probs / probs.sum()
             action = np.random.choice(Game.num_actions, p=probs)
-            states[current_move] = game.position.get_state()
-            y_act[current_move] = pure_probs
-            y_wdl[current_move] = wdl
+            current_game_states[current_move] = game.position.get_state()
+            current_game_actions[current_move] = pure_probs
+            current_game_wdl[current_move] = wdl
             current_move += 1
             game.commit_action(action)
             tree.commit_action(action)
         path = f"{self.games_path}/{time.strftime('%Y%m%d_%H%M%S')}_{self.game_idx}"
         os.mkdir(path)
-        np.save(f'{path}/states.npy', states[:current_move])
-        np.save(f'{path}/act.npy', y_act[:current_move])
-        np.save(f'{path}/wdl.npy', y_wdl[:current_move])
-        self.state_tensor = np.append(self.state_tensor,
-                                      states[:current_move],
+        np.save(f'{path}/states.npy', current_game_states[:current_move])
+        np.save(f'{path}/act.npy', current_game_actions[:current_move])
+        np.save(f'{path}/wdl.npy', current_game_wdl[:current_move])
+        self.states = np.append(self.states,
+                                      current_game_states[:current_move],
                                       axis=0)
-        self.y_act = np.append(self.y_act, y_act[:current_move], axis=0)
-        self.y_wdl = np.append(self.y_wdl, y_wdl[:current_move], axis=0)
+        self.actions = np.append(self.actions, current_game_actions[:current_move], axis=0)
+        self.wdl = np.append(self.wdl, current_game_wdl[:current_move], axis=0)
+
+    def get_batch(self, batch_size: Optional[int] = None) -> Tuple[ndarray, ndarray, ndarray]:
+        """Sample a batch from the internal buffer and return the tuple (states, actions, WDL).
+
+        Args:
+            batch_size (Optional[int]): The size of the batch to sample. If not provided,
+            defaults to the batch size specified in config
+
+        Returns:
+            Tuple[ndarray, ndarray, ndarray]: The tuple (states, actions, WDL).
+        """
+        assert len(self.states) > 0
+        if batch_size is None:
+            batch_size = self.config.batch_size
+        indexes = np.random.choice(len(self.states), batch_size)
+        return self.states[indexes], self.actions[indexes], self.wdl[indexes]
 
 
 def train(model: Model, config: Config, checkpoints=False) -> Model:
@@ -116,10 +133,12 @@ def train(model: Model, config: Config, checkpoints=False) -> Model:
     """
     model.update_config(config)
     config.exploration_noise = config.starting_exploration_noise
+    generator = SelfplayGenerator(model, config)
     for i in tqdm.tqdm(range(config.iteration_count)):
-        generator = SelfplayGenerator(model, config)
-        training_data = generator.generate_games(config.games_in_iteration)
-        model.train(config, training_data)
+        generator.generate_games(config.games_in_iteration)
+        for i in range(config.epochs):
+            training_data = generator.get_batch()
+            model.train(config, training_data)
         if checkpoints and i % config.checkpoints == 0:
             model.save(info=f"iteration_{i + 1}")
         config.exploration_noise *= config.exploration_decay
@@ -135,13 +154,14 @@ def main():
         if not os.path.exists(path):
             os.mkdir(path)
     config = Config()
-    config.learning_rate = 2e-3
-    config.games_in_iteration = 16
-    config.mcts_playout = 16
-    config.iteration_count = 40
+    config.learning_rate = 1e-3
+    config.games_in_iteration = 25
+    config.mcts_playout = 25
+    config.iteration_count = 10
     config.starting_exploration_noise = 0.5
     config.min_exploration_noise = 0.1
     config.exploration_decay = 0.95
+    config.epochs = 10
     model = Model(config)
     print(f'Created model with {model.model.count_params():,} parameters.')
     model = train(model, config)
