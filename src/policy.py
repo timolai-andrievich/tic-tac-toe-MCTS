@@ -4,12 +4,11 @@ import time
 from typing import Tuple
 
 import numpy as np
-import tensorflow as tf  # pylint: disable=import-error disable=no-name-in-module
 from numpy import ndarray
-from tensorflow.keras.optimizers import Adam  # Tensorflow is using lazy loaders pylint: disable=import-error disable=no-name-in-module
-from tensorflow import keras  # pylint: disable=import-error disable=no-name-in-module
-from tensorflow.keras import layers  # pylint: disable=import-error disable=no-name-in-module
-from tensorflow.keras.losses import CategoricalCrossentropy  # pylint: disable=import-error disable=no-name-in-module
+import torch
+from torch import nn
+from torch.nn import functional as F
+from torch.utils.data import TensorDataset, DataLoader
 
 from game import (
     Game,
@@ -18,95 +17,107 @@ from game import (
 )
 from config import Config
 
+class ConvLayer(nn.Module):
+    def __init__(self, in_channels, out_channels) -> None:
+        """Convolutional block.
+    Consists of convolution from `in_channels` to `out_channels`, batch normalization, and ReLU activation.
 
-def conv_layer(inputs: tf.Tensor, filters: int, name: str) -> tf.Tensor:
-    """Constructs a convolutional layer with ReLU activation and batch normalization.
-
-    Args:
-        inputs (tf.Tensor): Input tensor.
-        filters (int): The number of filters in convolution.
-        name (str): The name of the block.
-
-    Returns:
-        tf.Tensor: The output tensor of the block.
-    """
-    flow = inputs
-    flow = layers.Conv2D(filters, (3, 3), padding="same",
-                         name=f'{name}/conv')(flow)
-    flow = layers.BatchNormalization(name=f'{name}/bn')(flow)
-    flow = layers.ReLU(name=f'{name}/relu')(flow)
-    return flow
-
-
-def residual_layer(inputs: tf.Tensor, filters: int, name: str) -> tf.Tensor:
-    """Constructs a residual layer with `filters` features.
-
-    Args:
-        inputs (tf.Tensor): Input tensor.
-        filters (int): The number of filters in convolution.
-        name (str): The name of the block.
-
-    Returns:
-        tf.Tensor: The output tensor of the block.
-    """
-    flow = inputs
-    shortcut = flow
-    flow = layers.Conv2D(filters, (3, 3), padding="same",
-                         name=f'{name}/conv1')(flow)
-    flow = layers.BatchNormalization(name=f'{name}/bn')(flow)
-    flow = layers.ReLU(name=f'{name}/relu')(flow)
-    flow = layers.Conv2D(filters, (3, 3), padding="same",
-                         name=f'{name}/conv2')(flow)
-    flow = layers.Add(name=f'{name}/add')([shortcut, flow])
-    return flow
+        Args:
+            in_channels (int)
+            out_channels (int)
+        """        
+        super().__init__()
+        self.conv = nn.Conv2d(in_channels, out_channels, 3, 1, 'same')
+        self.norm = nn.BatchNorm2d(out_channels)
+        self.act = nn.ReLU()
+        
+    def forward(self, inputs):
+        flow = inputs
+        flow = self.conv(flow)
+        flow = self.norm(flow)
+        flow = self.act(flow)
+        return flow
 
 
-def create_model(filters=16) -> keras.Model:
-    """Builds the neural network
+class ResidualLayer(nn.Module):
+    def __init__(self, channels) -> None:
+        """Residual block. Consists of:
+        - Convolution from `channels` to `channels`
+        - Normalization
+        - ReLU activation
+        - Second convolution
+        - Residual skip connection
 
-    Args:
-        filters (int, optional): The amount of filters in convolutional layers. Defaults to 128.
+        Args:
+            channels (int): Amount of features in convolutions.
+        """        
+        super().__init__()
+        self.conv1 = nn.Conv2d(channels, channels, 3, 1, 'same')
+        self.norm = nn.BatchNorm2d(channels)
+        self.act = nn.ReLU()
+        self.conv2 = nn.Conv2d(channels, channels, 3, 1, 'same')
 
-    Returns:
-        keras.Model: Compiled keras model.
-    """
-    inputs = layers.Input(shape=(Game.board_height, Game.board_width,
-                                 Game.num_layers))
-    common = inputs
-    common = conv_layer(common, filters, 'common/conv')
-    common = residual_layer(common, filters, 'common/residual/1')
-    common = residual_layer(common, filters, 'common/residual/2')
+    def forward(self, inputs):
+        flow = inputs
+        shortcut = flow
+        flow = self.conv1(flow)
+        flow = self.norm(flow)
+        flow = self.act(flow)
+        flow = self.conv2(flow)
+        flow = shortcut + flow
+        return flow
 
-    pol = common
-    pol = residual_layer(pol, filters, name="pol/residual/1")
-    pol = conv_layer(pol, 1, name='pol/conv/1')
-    pol = layers.Flatten(name='pol/flat')(pol)
-    pol = layers.Softmax(name='pol/final/softmax')(pol)
 
-    val = common
-    val = residual_layer(val, filters, name='val/residual/1')
-    val = layers.Flatten(name='val/flatten')(val)
-    val = layers.Dense(128, name='val/dense')(val)
-    val = layers.ReLU(name='val/dense/relu')(val)
-    val = layers.Dense(3, name='val/final/dense')(val)
-    val = layers.Softmax(name='val/final/softmax')(val)
+class Network(nn.Module):
+    def __init__(self, filters=128, blocks=10) -> None:
+        """Neural network. Takes game states as input and returns policy and value vectors.
 
-    model = keras.Model(inputs, [pol, val])
-    model.build(input_shape=(None, Game.board_height, Game.board_width,
-                             Game.num_layers))
-    return model
+        Args:
+            filters (int, optional): Filters in residual blocks. Defaults to 128.
+            blocks (int, optional): Amount of residual blocks in common part. Defaults to 10.
+        """        
+        super().__init__()
+        self.init_conv = ConvLayer(Game.num_layers, filters)
+        self.common = nn.Sequential(
+            *([ResidualLayer(filters)] * blocks)
+        )
+        self.pol = nn.Sequential(
+            ConvLayer(filters, filters),
+            nn.Conv2d(filters, 1, 1, 1, 'valid'),
+            nn.Flatten(),
+        )
+        self.wdl = nn.Sequential(
+            ConvLayer(filters, 8),
+            nn.Flatten(),
+            nn.Linear(Game.board_height * Game.board_width * 8, 128),
+            nn.Linear(128, 3),
+        )
+
+    def forward(self, inputs, logits=False):
+        flow = inputs
+        flow = torch.permute(flow, [0, 3, 1, 2])
+        flow = self.init_conv(flow)
+        flow = self.common(flow)
+        pol = self.pol(flow)
+        wdl = self.wdl(flow)
+        if not logits:
+            pol = torch.nn.functional.softmax(pol, dim=-1)
+            wdl = torch.nn.functional.softmax(wdl, dim=-1)
+        return [pol, wdl]
 
 
 class Model:
     """A wrapper for the network"""
 
-    def __init__(self, config: Config, file_path=None):
-        self.loss = CategoricalCrossentropy()
-        self.optimizer = Adam(config.learning_rate)
+    def __init__(self, config: Config, file_path=None, device='cuda'):
+        self.loss = nn.MSELoss()
+        self.device = device
         if file_path is None:
-            self.model = create_model()
+            self.model = Network().to(self.device)
         else:
-            self.model = tf.keras.models.load_model(file_path)
+            self.model = Network().to(self.device)
+            self.model.load_state_dict(torch.load(file_path))
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=config.learning_rate)
 
     def update_config(self, config: Config):
         """Updates current model parameters from the config provided.
@@ -114,7 +125,8 @@ class Model:
         Args:
             config (Config): New config.
         """
-        self.optimizer.learning_rate = config.learning_rate
+        pass
+        # self.optimizer.learning_rate = config.learning_rate
 
     def policy_function(self, position: Position) -> Tuple[ndarray, ndarray]:
         """Evaluates the position and returns probabilities of actions and outcome probabilities.
@@ -126,9 +138,12 @@ class Model:
             Tuple[ndarray, ndarray]: Action probabilities and outcome probabilities in format
             [Win, Draw, Lose].
         """
-        state = position.get_state()[np.newaxis, ...]
+        state = position.get_state()[np.newaxis, ...].astype(np.float32)
+        state = torch.from_numpy(state).to(self.device)
         act, val = self.model(state)
-        return act.numpy()[0], val.numpy()[0]
+        act = act.detach().cpu().numpy()
+        val = val.detach().cpu().numpy()
+        return act[0], val[0]
 
     def save(self, file_name: str = None, info: str = ""):
         """Saves the model's weights into a file. If no filename is provided, then
@@ -145,9 +160,8 @@ class Model:
         if file_name is None:
             file_name = (f"../models/model-{time.strftime('%Y%m%d_%H%M%S')}"
                          f"{f'_{info}' if info else ''}.h5")
-        self.model.save(file_name)
+        torch.save(self.model.state_dict(), file_name)
 
-    @tf.function(reduce_retracing=True)
     def train_step(self, states: ndarray, y_act: ndarray, y_val: ndarray):
         """Performs on training step on the model.
 
@@ -156,14 +170,16 @@ class Model:
             y_act (ndarray): A tensor with the action probabilities.
             y_val (ndarray): A tensor with outcome probabilities.
         """
-        with tf.GradientTape() as tape:
-            pred_act, pred_val = self.model(states)
-            act_loss = self.loss(y_act, pred_act)
-            val_loss = self.loss(y_val, pred_val)
-            loss = act_loss + val_loss
-        gradients = tape.gradient(loss, self.model.trainable_variables)
-        self.optimizer.apply_gradients(
-            zip(gradients, self.model.trainable_variables))
+        states = states.to(self.device)
+        y_act = y_act.to(self.device)
+        y_val = y_val.to(self.device)
+        pred_act, pred_val = self.model(states)
+        act_loss = self.loss(y_act, pred_act)
+        val_loss = self.loss(y_val, pred_val)
+        loss = act_loss + val_loss
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
 
     def train(self, config: Config, batch: Tuple[ndarray, ndarray, ndarray]):
         """Trains the model on a given batch of data.
@@ -173,7 +189,10 @@ class Model:
             batch (Tuple[ndarray, ndarray, ndarray]): The training data.
         """
         states, y_act, y_val = augment_data(*batch)
-        dataset = (tf.data.Dataset.from_tensor_slices(
-            (states, y_act, y_val)).shuffle(10000).batch(config.batch_size))
-        for states, y_act, y_val in dataset:
+        states, y_act, y_val = [states.astype(np.float32), 
+                                y_act.astype(np.float32), 
+                                y_val.astype(np.float32)]
+        dataset = TensorDataset(*map(torch.from_numpy, [states, y_act, y_val]))
+        loader = DataLoader(dataset, batch_size=config.batch_size, shuffle=True)
+        for states, y_act, y_val in loader:
             self.train_step(states, y_act, y_val)

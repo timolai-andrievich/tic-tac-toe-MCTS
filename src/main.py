@@ -92,11 +92,6 @@ class SelfplayGenerator:
             current_move += 1
             game.commit_action(action)
             tree.commit_action(action)
-        path = f"{self.games_path}/{time.strftime('%Y%m%d_%H%M%S')}_{self.game_idx}"
-        os.mkdir(path)
-        np.save(f'{path}/states.npy', current_game_states[:current_move])
-        np.save(f'{path}/act.npy', current_game_actions[:current_move])
-        np.save(f'{path}/wdl.npy', current_game_wdl[:current_move])
         self.states = np.append(self.states,
                                       current_game_states[:current_move],
                                       axis=0)
@@ -139,7 +134,7 @@ def train(model: Model, config: Config, checkpoints=False) -> Model:
         for i in range(config.epochs):
             training_data = generator.get_batch()
             model.train(config, training_data)
-        if checkpoints and i % config.checkpoints == 0:
+        if checkpoints and i % config.checkpoints_interval == 0:
             model.save(info=f"iteration_{i + 1}")
         config.exploration_noise *= config.exploration_decay
         if config.exploration_noise < config.min_exploration_noise:
@@ -154,16 +149,7 @@ def main():
         if not os.path.exists(path):
             os.mkdir(path)
     config = Config()
-    config.learning_rate = 1e-3
-    config.games_in_iteration = 25
-    config.mcts_playout = 25
-    config.iteration_count = 10
-    config.starting_exploration_noise = 0.5
-    config.min_exploration_noise = 0.1
-    config.exploration_decay = 0.95
-    config.epochs = 10
     model = Model(config)
-    print(f'Created model with {model.model.count_params():,} parameters.')
     model = train(model, config)
     model.save()
     random_player = RandomPlayer()
