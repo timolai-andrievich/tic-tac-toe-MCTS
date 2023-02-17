@@ -166,7 +166,7 @@ class MCTS:
             game.commit_action(action)
         # Expand the node if possible
         if not game.is_finished():
-            probs, new_value = policy_function(game.position)
+            probs, new_value = policy_function(game.position.get_state())
             node.expand(game, probs)
         else:
             new_value = game.get_wdl()

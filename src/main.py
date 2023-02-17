@@ -1,9 +1,7 @@
 """Entry point of the program.
 """
 from typing import Tuple, Optional
-import os
 import os.path
-import time
 
 import numpy as np
 import tqdm
@@ -16,7 +14,7 @@ from config import Config
 from player import RandomPlayer
 from utils import evaluate_pure_models_against_player
 
-required_folders = ['../models', '../games']
+required_folders = ['../models']
 
 
 class SelfplayGenerator:
@@ -37,8 +35,6 @@ class SelfplayGenerator:
             (0, Game.board_height, Game.board_width, Game.num_layers))
         self.actions = np.zeros((0, Game.num_actions))
         self.wdl = np.zeros((0, 3))
-        self.games_path = f"../games/{time.strftime('%Y%m%d_%H%M%S')}"
-        os.mkdir(self.games_path)
 
     def generate_games(self, count: int):
         """Generates `count` games through self-play, and adds them to the internal buffer.

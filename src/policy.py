@@ -128,7 +128,7 @@ class Model:
         pass
         # self.optimizer.learning_rate = config.learning_rate
 
-    def policy_function(self, position: Position) -> Tuple[ndarray, ndarray]:
+    def policy_function(self, state: ndarray) -> Tuple[ndarray, ndarray]:
         """Evaluates the position and returns probabilities of actions and outcome probabilities.
 
         Args:
@@ -138,12 +138,12 @@ class Model:
             Tuple[ndarray, ndarray]: Action probabilities and outcome probabilities in format
             [Win, Draw, Lose].
         """
-        state = position.get_state()[np.newaxis, ...].astype(np.float32)
+        state = state[np.newaxis, ...].astype(np.float32)
         state = torch.from_numpy(state).to(self.device)
         act, val = self.model(state)
         act = act.detach().cpu().numpy()
         val = val.detach().cpu().numpy()
-        return act[0], val[0]
+        return (act[0], val[0])
 
     def save(self, file_name: str = None, info: str = ""):
         """Saves the model's weights into a file. If no filename is provided, then
@@ -159,7 +159,7 @@ class Model:
         """
         if file_name is None:
             file_name = (f"../models/model-{time.strftime('%Y%m%d_%H%M%S')}"
-                         f"{f'_{info}' if info else ''}.h5")
+                         f"{f'_{info}' if info else ''}.pt")
         torch.save(self.model.state_dict(), file_name)
 
     def train_step(self, states: ndarray, y_act: ndarray, y_val: ndarray):
@@ -173,9 +173,9 @@ class Model:
         states = states.to(self.device)
         y_act = y_act.to(self.device)
         y_val = y_val.to(self.device)
-        pred_act, pred_val = self.model(states)
-        act_loss = self.loss(y_act, pred_act)
-        val_loss = self.loss(y_val, pred_val)
+        pred_act, pred_val = self.model(states, logits=False)
+        act_loss = self.loss(pred_act, y_act)
+        val_loss = self.loss(pred_val, y_val)
         loss = act_loss + val_loss
         self.optimizer.zero_grad()
         loss.backward()
