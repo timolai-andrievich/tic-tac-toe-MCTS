@@ -13,15 +13,16 @@ probs_to_eval = np.array([1, .5, 0])
 
 
 class Node:
-    """Represents the node of the game tree.
+    """Represents the node in the game tree.
     """
 
     def __init__(self, parent, prior: float, config: Config):
-        """Represents the node of the game tree
+        """Initializes a tree node.
 
         Args:
             parent (Node): Parent of the node.
-            prior (float)
+            prior (float): A probability of an action that leads to that node.
+                Used in the calculation of upper confidence bound score.
             current_move (int): The player that is to move
             from the position represented by the node.
             config (Config): Config object with parameters for MCTS.
@@ -34,7 +35,7 @@ class Node:
         self.results = np.array([0.0, 0.0, 0.0])
 
     def avg(self) -> float:
-        """Returns the numerical evaluation of the position.
+        """Returns average of the results of playouts from the Node.
 
         Returns:
             float: Evaluation.
@@ -166,7 +167,7 @@ class MCTS:
             game.commit_action(action)
         # Expand the node if possible
         if not game.is_finished():
-            probs, new_value = policy_function(game.position)
+            probs, new_value = policy_function(game.position.get_state())
             node.expand(game, probs)
         else:
             new_value = game.get_wdl()
