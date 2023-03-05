@@ -133,7 +133,8 @@ class Model:
         Args:
             config (Config): Config containing hyperparameters for the model, such as learning rate.
             file_path (_type_, optional): File path to the network weights. Defaults to None.
-            device (str, optional): Device onto which load the model. Defaults to cpu. Can be either 'cpu' or 'cuda'
+            device (str, optional): Device onto which load the model. Defaults to cpu.
+            Can be either 'cpu' or 'cuda'
         """
         self.loss = nn.MSELoss()
         if device is None:

@@ -1,5 +1,8 @@
 """Contains various unit tests.
 """
+import os
+import os.path
+
 import numpy as np
 
 from game import Game, test_game, test_position, START_POSITION  # pylint: disable=unused-import
@@ -28,6 +31,8 @@ def test_model():
     )
     model.train(config, batch)
     act, val = model.policy_function(pos.get_state())
+    if not os.path.exists('../models'):
+        os.mkdir('../models')
     model.save(file_name="../models/test")
     model = policy.Model(config, file_path="../models/test")
     new_act, new_val = model.policy_function(pos.get_state())
