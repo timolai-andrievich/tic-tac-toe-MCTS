@@ -55,9 +55,11 @@ class SelfplayGenerator:
         """Generates a game and adds it to the class attributes.
         """
         game = Game()
-        current_game_states: ndarray = np.zeros((self.config.max_moves, Game.board_height,
-                                    Game.board_width, Game.num_layers))
-        current_game_actions: ndarray = np.zeros((self.config.max_moves, Game.num_actions))
+        current_game_states: ndarray = np.zeros(
+            (self.config.max_moves, Game.board_height, Game.board_width,
+             Game.num_layers))
+        current_game_actions: ndarray = np.zeros(
+            (self.config.max_moves, Game.num_actions))
         current_game_wdl: ndarray = np.zeros((self.config.max_moves, 3))
         # Initialize Monte-Carlo Tree Search
         tree = MCTS(self.config)
@@ -89,12 +91,17 @@ class SelfplayGenerator:
             game.commit_action(action)
             tree.commit_action(action)
         self.states = np.append(self.states,
-                                      current_game_states[:current_move],
-                                      axis=0)
-        self.actions = np.append(self.actions, current_game_actions[:current_move], axis=0)
+                                current_game_states[:current_move],
+                                axis=0)
+        self.actions = np.append(self.actions,
+                                 current_game_actions[:current_move],
+                                 axis=0)
         self.wdl = np.append(self.wdl, current_game_wdl[:current_move], axis=0)
 
-    def get_batch(self, batch_size: Optional[int] = None) -> Tuple[ndarray, ndarray, ndarray]:
+    def get_batch(
+            self,
+            batch_size: Optional[int] = None
+    ) -> Tuple[ndarray, ndarray, ndarray]:
         """Sample a batch from the internal buffer and return the tuple (states, actions, WDL).
 
         Args:

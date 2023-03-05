@@ -160,7 +160,7 @@ class ModelPlayer(Player):  # pylint: disable=too-few-public-methods
         Returns:
             int: The ID of the chosen action.
         """
-        actions, _ = self.model.policy_function(game.position)
+        actions, _ = self.model.policy_function(game.position.get_state())
         legal_actions = game.get_actions()
         if self.temp < 1e-6:
             action = max(legal_actions, key=lambda x: actions[x])

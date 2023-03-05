@@ -12,25 +12,14 @@ unit_test_config.mcts_playout = 20
 unit_test_config.test_games = 1
 
 
-def test_nnmodel():
-    """Runs unit tests on a keras.Model, built by model.create_model.
-    """
-    pos = START_POSITION.copy()
-    state = pos.get_state()[np.newaxis, ...]
-    model = policy.create_model()
-    act, val = model(state)
-    assert act.shape == (1, Game.num_actions)
-    assert val.shape == (1, 3)
-
-
-def test_nn():
+def test_model():
     """Runs unit tests on a model.Model class.
     """
     config = unit_test_config
     model = policy.Model(config)
     pos = START_POSITION.copy()
     pos.get_state()
-    model.policy_function(pos)
+    model.policy_function(pos.get_state())
     batch = (
         pos.get_state().reshape(
             (-1, Game.board_height, Game.board_width, Game.num_layers)),
@@ -38,10 +27,10 @@ def test_nn():
         np.array([[0, 1, 0]]),
     )
     model.train(config, batch)
-    act, val = model.policy_function(pos)
+    act, val = model.policy_function(pos.get_state())
     model.save(file_name="../models/test")
     model = policy.Model(config, file_path="../models/test")
-    new_act, new_val = model.policy_function(pos)
+    new_act, new_val = model.policy_function(pos.get_state())
     assert (act - new_act).sum() < 1e-3
     assert (val - new_val).sum() < 1e-3
 
@@ -68,5 +57,5 @@ def test_tree():
     model = policy.Model(unit_test_config)
     game = Game()
     tree = mcts.MCTS(unit_test_config)
-    # Run MCTS on a blank game and uniform NN
+    # Run MCTS on a blank game and freshly initialized NN
     tree.run(game, model.policy_function)

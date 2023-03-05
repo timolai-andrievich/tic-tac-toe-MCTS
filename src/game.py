@@ -14,10 +14,15 @@ Image = str
 
 
 class Position:
-    """Represents game position
+    """Represents a game position.
     """
 
     def __init__(self, board: ndarray):
+        """Initializes a game position from the board.
+
+        Args:
+            board (ndarray): The board that the position should represent.
+        """
         self.board: ndarray = board  # Array with shape (BOARD_HEIGHT, BOARD_WIDTH)
         assert self.board.shape == (BOARD_HEIGHT, BOARD_WIDTH)
 

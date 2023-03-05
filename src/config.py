@@ -8,7 +8,7 @@ class Config:  # pylint: disable=too-few-public-methods
     """
     # Training-related parameters
     iteration_count = 12
-    checkpoints_interval = 10000
+    checkpoints_interval = 3
     games_in_iteration = 25
     batch_size = 64
     buffer_size = 1000
