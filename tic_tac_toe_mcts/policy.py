@@ -146,7 +146,8 @@ class Model:
             self.network = Network().to(self.device)
         else:
             self.network = Network().to(self.device)
-            self.network.load_state_dict(torch.load(file_path))
+            self.network.load_state_dict(
+                torch.load(file_path, map_location=self.device))
         self.optimizer = torch.optim.Adam(self.network.parameters(),
                                           lr=config.learning_rate)
 
@@ -176,7 +177,7 @@ class Model:
 
     def save(self, file_name: str = None, info: str = ""):
         """Saves the model's weights into a file. If no filename is provided, then
-        ../models/model-%Y%m%d_%H%M%S.pt is chosen, where %Y is current year (4 digits),
+        ./models/model-%Y%m%d_%H%M%S.pt is chosen, where %Y is current year (4 digits),
         %m - current month (2 digits), %d - current day (2 digits), %H - current hour
         (2 digits), %M - current minute (2 digits), %S - current second (2 digits).
         Args:

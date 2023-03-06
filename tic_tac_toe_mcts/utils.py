@@ -133,7 +133,7 @@ def print_results_table(table: Dict[str, Tuple[int, int, int]]):
 def evaluate_models_against_player(config: Config,
                                    player: Player,
                                    games: int,
-                                   path="../models"):
+                                   path="./models"):
     """Loads models from files in `path` folder, and evaluates
     all of them against a given player using MCTS.
     Prints results of evaluation to stdout.
@@ -142,7 +142,7 @@ def evaluate_models_against_player(config: Config,
         config (Config): MCTS and NN parameters.
         player (Player): Player to evaluate against.
         games (int): Games to play in one match.
-        path (str, optional): Path to folder with model weights. Defaults to "../models".
+        path (str, optional): Path to folder with model weights. Defaults to "./models".
     """
     models_results: Dict[str, List[int, int, int]] = {}
     for file_path in glob.glob(f"{path}/*"):
@@ -157,7 +157,7 @@ def evaluate_models_against_player(config: Config,
 def evaluate_pure_models_against_player(config: Config,
                                         player: Player,
                                         games: int,
-                                        path="../models"):
+                                        path="./models"):
     """Loads models from files in `path` folder, and evaluates
     all of them against a given player.
     Prints results of evaluation to stdout.
@@ -166,7 +166,7 @@ def evaluate_pure_models_against_player(config: Config,
         config (Config): MCTS and NN parameters.
         player (Player): Player to evaluate against.
         games (int): Games to play in one match.
-        path (str, optional): Path to folder with model weights. Defaults to "../models".
+        path (str, optional): Path to folder with model weights. Defaults to "./models".
     """
     models_results: Dict[str, List[int, int, int]] = {}
     for file_path in glob.glob(f"{path}/*"):
