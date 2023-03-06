@@ -5,10 +5,10 @@ import os.path
 
 import numpy as np
 
-from game import Game, test_game, test_position, START_POSITION  # pylint: disable=unused-import
-import mcts
-import policy
-from config import Config
+from tic_tac_toe_mcts.game import Game, test_game, test_position, START_POSITION  # pylint: disable=unused-import
+from tic_tac_toe_mcts import mcts
+from tic_tac_toe_mcts import policy
+from tic_tac_toe_mcts.config import Config
 
 unit_test_config = Config()
 unit_test_config.mcts_playout = 20
@@ -31,10 +31,10 @@ def test_model():
     )
     model.train(config, batch)
     act, val = model.policy_function(pos.get_state())
-    if not os.path.exists('../models'):
-        os.mkdir('../models')
-    model.save(file_name="../models/test")
-    model = policy.Model(config, file_path="../models/test")
+    if not os.path.exists('./models'):
+        os.mkdir('./models')
+    model.save(file_name="./models/test")
+    model = policy.Model(config, file_path="./models/test")
     new_act, new_val = model.policy_function(pos.get_state())
     assert (act - new_act).sum() < 1e-3
     assert (val - new_val).sum() < 1e-3
@@ -64,3 +64,7 @@ def test_tree():
     tree = mcts.MCTS(unit_test_config)
     # Run MCTS on a blank game and freshly initialized NN
     tree.run(game, model.policy_function)
+
+
+if __name__ == '__main__':
+    print('Run "pytest test.py" in the project directory.')

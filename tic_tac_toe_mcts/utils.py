@@ -8,10 +8,10 @@ import numpy as np
 import tqdm
 from scipy.stats import beta
 
-from game import Game
-from policy import Model
-from config import Config
-from player import MctsPlayer, ModelPlayer, Player
+from .game import Game
+from .policy import Model
+from .config import Config
+from .player import MctsPlayer, ModelPlayer, Player
 
 
 def play_game(player_1: Player, player_2: Player) -> int:

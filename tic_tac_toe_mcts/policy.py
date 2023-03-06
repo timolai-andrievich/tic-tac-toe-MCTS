@@ -2,16 +2,18 @@
 """
 import time
 from typing import Tuple
+
 import numpy as np
 from numpy import ndarray
 import torch
 from torch import nn
 from torch.utils.data import TensorDataset, DataLoader
-from game import (
+
+from .game import (
     Game,
     augment_data,
 )
-from config import Config
+from .config import Config
 
 
 class ConvLayer(nn.Module):
@@ -184,7 +186,7 @@ class Model:
             Defaults to empty string.
         """
         if file_name is None:
-            file_name = (f"../models/model-{time.strftime('%Y%m%d_%H%M%S')}"
+            file_name = (f"./models/model-{time.strftime('%Y%m%d_%H%M%S')}"
                          f"{f'_{info}' if info else ''}.pt")
         torch.save(self.network.state_dict(), file_name)
 
