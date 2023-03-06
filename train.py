@@ -7,14 +7,14 @@ import numpy as np
 import tqdm
 from numpy import ndarray
 
-from game import Game
-from mcts import MCTS
-from policy import Model
-from config import Config
-from player import RandomPlayer
-from utils import evaluate_pure_models_against_player
+from tic_tac_toe_mcts.game import Game
+from tic_tac_toe_mcts.mcts import MCTS
+from tic_tac_toe_mcts.policy import Model
+from tic_tac_toe_mcts.config import Config
+from tic_tac_toe_mcts.player import RandomPlayer
+from tic_tac_toe_mcts.utils import evaluate_pure_models_against_player
 
-required_folders = ['../models']
+required_folders = ['./models']
 
 
 class SelfplayGenerator:

@@ -6,8 +6,8 @@ import math
 from numpy import ndarray
 import numpy as np
 
-from config import Config
-from game import Game
+from .config import Config
+from .game import Game
 
 probs_to_eval = np.array([1, .5, 0])
 

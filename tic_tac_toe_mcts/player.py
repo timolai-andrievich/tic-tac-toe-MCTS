@@ -5,10 +5,10 @@ from typing import Dict
 
 import numpy as np
 
-from game import Game
-from mcts import MCTS
-from policy import Model
-from config import Config
+from .game import Game
+from .mcts import MCTS
+from .policy import Model
+from .config import Config
 
 
 class Player:  # pylint: disable=too-few-public-methods

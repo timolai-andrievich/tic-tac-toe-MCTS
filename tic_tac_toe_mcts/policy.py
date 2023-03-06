@@ -2,16 +2,18 @@
 """
 import time
 from typing import Tuple
+
 import numpy as np
 from numpy import ndarray
 import torch
 from torch import nn
 from torch.utils.data import TensorDataset, DataLoader
-from game import (
+
+from .game import (
     Game,
     augment_data,
 )
-from config import Config
+from .config import Config
 
 
 class ConvLayer(nn.Module):
@@ -144,7 +146,8 @@ class Model:
             self.network = Network().to(self.device)
         else:
             self.network = Network().to(self.device)
-            self.network.load_state_dict(torch.load(file_path))
+            self.network.load_state_dict(
+                torch.load(file_path, map_location=self.device))
         self.optimizer = torch.optim.Adam(self.network.parameters(),
                                           lr=config.learning_rate)
 
@@ -174,7 +177,7 @@ class Model:
 
     def save(self, file_name: str = None, info: str = ""):
         """Saves the model's weights into a file. If no filename is provided, then
-        ../models/model-%Y%m%d_%H%M%S.pt is chosen, where %Y is current year (4 digits),
+        ./models/model-%Y%m%d_%H%M%S.pt is chosen, where %Y is current year (4 digits),
         %m - current month (2 digits), %d - current day (2 digits), %H - current hour
         (2 digits), %M - current minute (2 digits), %S - current second (2 digits).
         Args:
@@ -184,7 +187,7 @@ class Model:
             Defaults to empty string.
         """
         if file_name is None:
-            file_name = (f"../models/model-{time.strftime('%Y%m%d_%H%M%S')}"
+            file_name = (f"./models/model-{time.strftime('%Y%m%d_%H%M%S')}"
                          f"{f'_{info}' if info else ''}.pt")
         torch.save(self.network.state_dict(), file_name)
 
