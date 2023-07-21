@@ -166,6 +166,7 @@ class ModelPlayer(Player):  # pylint: disable=too-few-public-methods
             action = max(legal_actions, key=lambda x: actions[x])
         else:
             actions = np.power(actions, 1 / self.temp)
+            actions += 1e-3
             for i in range(Game.num_actions):
                 if not i in legal_actions:
                     actions[i] = 0

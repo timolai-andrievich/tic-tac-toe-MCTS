@@ -7,17 +7,14 @@ class Config:  # pylint: disable=too-few-public-methods
     """Class that contains hyperparameters for the neural network
     """
     # Training-related parameters
-    iteration_count = 3
-    checkpoints = 10
-    test_checkpoints = 1
-    games_in_iteration = 25
+    iteration_count = 1000
+    checkpoints_interval = 50
+    games_in_iteration = 1
     batch_size = 64
-    buffer_size = 500
-    test_games = 10
+    buffer_size = 2000
     temp = 1
-    learning_rate = 1e-3
-    epochs=10
-    minibatch_size = 128
+    learning_rate = 2e-4
+    epochs = 1
     # Exploration noise
     starting_exploration_noise = 1
     exploration_decay = 0.90
@@ -25,8 +22,8 @@ class Config:  # pylint: disable=too-few-public-methods
     exploration_noise = starting_exploration_noise
 
     # MCTS Parameters
-    mcts_playout = 400
+    mcts_playout = 80
     c_impact = 5
 
     # Game parameters
-    max_moves = 9
+    max_moves = 64

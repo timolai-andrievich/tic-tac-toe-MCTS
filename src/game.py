@@ -5,11 +5,11 @@ from typing import Tuple
 import numpy as np
 from numpy import ndarray
 
-NUM_ACTIONS = 9
-BOARD_WIDTH = 3
-BOARD_HEIGHT = 3
-NUM_LAYERS = 3
-IN_ROW = 3  # Number of symbols placed in a row required to win
+NUM_ACTIONS = 64
+BOARD_WIDTH = 8
+BOARD_HEIGHT = 8
+NUM_LAYERS = 4
+IN_ROW = 5  # Number of symbols placed in a row required to win
 Image = str
 
 
